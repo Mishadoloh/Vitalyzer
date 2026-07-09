@@ -1,0 +1,190 @@
+// Vitalyzer — Prisma schema (PostgreSQL)
+// Multi-tenant SaaS: Google sign-in (NextAuth) + Stripe subscription gating the whole app.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- NextAuth (Google OAuth) ---
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  isGuest       Boolean   @default(false) // true for "Продовжити як гість" accounts (no Google email)
+  createdAt     DateTime  @default(now())
+
+  accounts Account[]
+  sessions Session[]
+
+  // --- Stripe subscription (whole app is gated on subscriptionStatus === 'active') ---
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  subscriptionStatus     String? // active | trialing | past_due | canceled | incomplete | null
+
+  sleepEntries     SleepEntry[]
+  workoutEntries   WorkoutEntry[]
+  nutritionEntries NutritionEntry[]
+  weightEntries    WeightEntry[]
+  moodEntries      MoodEntry[]
+  settings         Settings?
+  adviceCache      AdviceCache[]
+}
+
+// --- Personal health data (all scoped to a user) ---
+
+model SleepEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String // 'YYYY-MM-DD' — one aggregated record per night per user
+  hours     Float
+  quality   Float?
+  bedtime   String?
+  wakeTime  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model WorkoutEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        String // 'YYYY-MM-DD' — multiple workouts per day allowed
+  type        String
+  durationMin Float    @default(0)
+  calories    Float?
+  intensity   String?
+  avgHR       Float?
+  distanceKm  Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, date])
+}
+
+model NutritionEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String // 'YYYY-MM-DD' — one aggregated record per day per user
+  calories  Float    @default(0)
+  proteinG  Float    @default(0)
+  carbsG    Float    @default(0)
+  fatG      Float    @default(0)
+  waterMl   Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model WeightEntry {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date       String // 'YYYY-MM-DD' — one weigh-in per day per user
+  weightKg   Float
+  bodyFatPct Float?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model MoodEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String // 'YYYY-MM-DD'
+  mood      Int // 1-5
+  energy    Int // 1-5
+  stress    Int? // 1-5
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+// One settings row per user holding personal goals & AI key.
+model Settings {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weightKg        Float   @default(70)
+  goal            String  @default("maintain") // lose | maintain | gain | perform
+  sleepTarget     Float   @default(8)
+  calTarget       Float   @default(2200)
+  proteinTarget   Float   @default(1.8)
+  workoutsTarget  Int     @default(4)
+  anthropicApiKey String? // optional — overrides ANTHROPIC_API_KEY env var if set
+  aiModel         String? // optional — defaults to claude-sonnet-4-5 in code
+}
+
+// One cached advice entry per user per day so the dashboard doesn't regenerate on every load.
+model AdviceCache {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date         String // 'YYYY-MM-DD'
+  source       String // 'rules' | 'ai'
+  tag          String
+  overallScore Int?
+  scoresJson   Json
+  statsJson    Json
+  itemsJson    Json
+  generatedAt  DateTime @default(now())
+
+  @@unique([userId, date])
+}
