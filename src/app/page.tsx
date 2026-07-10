@@ -1,5 +1,8 @@
 import {
   CheckCircle2,
+  Clock3,
+  Database,
+  FileDown,
   LineChart,
   Moon,
   ScanLine,
@@ -20,6 +23,7 @@ import TiltCard from '@/components/TiltCard';
 import Reveal from '@/components/Reveal';
 import AnimatedStat from '@/components/AnimatedStat';
 import FaqAccordion from '@/components/FaqAccordion';
+import CtaData3DLoader from '@/components/CtaData3DLoader';
 
 const FEATURES = [
   {
@@ -99,6 +103,24 @@ const FAQ = [
   {
     q: 'Чи можна скасувати підписку в будь-який момент?',
     a: 'Так, керування підпискою — через захищений білінг-портал Stripe прямо в Налаштуваннях, без листів у підтримку.',
+  },
+];
+
+const FAQ_POINTS = [
+  {
+    icon: Database,
+    title: 'Дані лишаються вашими',
+    text: 'Записи привʼязані до вашого акаунта, а резервну копію можна забрати в JSON.',
+  },
+  {
+    icon: Clock3,
+    title: 'Старт без налаштувань',
+    text: 'Гостьовий режим відкриває дашборд одразу, без Google і без Stripe.',
+  },
+  {
+    icon: FileDown,
+    title: 'Імпорт без привʼязки',
+    text: 'Підходять CSV та Excel-експорти з трекерів, які ви вже використовуєте.',
   },
 ];
 
@@ -284,20 +306,70 @@ export default async function LandingPage() {
         </Reveal>
       </section>
 
-      <section className="relative mx-auto max-w-2xl px-5 pb-20">
+      <section className="relative border-y border-border/60 bg-bg-elevated/25 px-5 py-16 sm:py-20">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+          <Reveal className="lg:sticky lg:top-24">
+            <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[12px] text-accent">
+              <ShieldCheck size={13} />
+              Перед стартом
+            </span>
+            <h2 className="m-0 max-w-sm text-2xl font-semibold leading-tight sm:text-3xl">
+              Питання, які варто закрити до першого імпорту
+            </h2>
+            <p className="mt-4 max-w-md text-[14px] leading-7 text-text-muted">
+              Vitalyzer не просить міняти звички або переносити все вручну. Він забирає дані з уже знайомих джерел і
+              перетворює їх на коротку щоденну дію.
+            </p>
+            <div className="mt-7 flex flex-col gap-4">
+              {FAQ_POINTS.map((item) => (
+                <div key={item.title} className="flex gap-3">
+                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-bg-card text-accent">
+                    <item.icon size={17} />
+                  </span>
+                  <span>
+                    <span className="block text-[14px] font-semibold text-text">{item.title}</span>
+                    <span className="mt-1 block text-[13px] leading-6 text-text-muted">{item.text}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+          <Reveal>
+            <FaqAccordion items={FAQ} />
+          </Reveal>
+        </div>
+      </section>
+
+      <section className="relative px-5 py-12 sm:py-14">
         <Reveal>
-          <h2 className="mb-6 text-center text-xl font-semibold sm:text-2xl">Питання, які виникають найчастіше</h2>
-          <FaqAccordion items={FAQ} />
+          <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-6 overflow-hidden border-y border-border/70 py-8 text-center sm:grid-cols-[minmax(0,1fr)_300px_auto] sm:text-left">
+            <div>
+              <h2 className="m-0 text-xl font-semibold sm:text-2xl">Перевірте на власних даних за кілька хвилин</h2>
+              <p className="mt-2 max-w-xl text-[14px] text-text-muted">
+                Відкрийте гостьовий режим, внесіть перший запис або імпортуйте файл і подивіться, яку пораду дасть рушій.
+              </p>
+            </div>
+            <CtaData3DLoader className="pointer-events-none mx-auto h-[160px] w-full max-w-[330px] opacity-95 sm:h-[170px] sm:max-w-none" />
+            <GuestSignInButton
+              callbackUrl="/app"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent-strong px-6 py-3 text-[15px] font-semibold text-[#06281c] hover:opacity-90 sm:w-auto"
+            />
+          </div>
         </Reveal>
       </section>
 
-      <footer className="relative border-t border-border/60 px-5 py-10 text-text-muted">
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-5 sm:flex-row sm:justify-between">
-          <div className="flex items-center gap-2 text-sm font-bold text-text">
-            <span className="text-accent">◆</span>
-            Vitalyzer
+      <footer className="relative border-t border-border/60 bg-bg-elevated/35 px-5 py-10 text-text-muted">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 sm:grid-cols-[1.1fr_auto_auto] sm:items-start">
+          <div>
+            <div className="flex items-center justify-center gap-2 text-sm font-bold text-text sm:justify-start">
+              <span className="text-accent">◆</span>
+              Vitalyzer
+            </div>
+            <p className="mx-auto mt-3 max-w-sm text-center text-xs leading-6 sm:mx-0 sm:text-left">
+              Один спокійний дашборд для сну, тренувань, харчування, ваги й настрою.
+            </p>
           </div>
-          <nav className="flex gap-5 text-[13px]">
+          <nav className="flex justify-center gap-5 text-[13px] sm:justify-start">
             <a href="#features" className="hover:text-text">
               Функції
             </a>
@@ -308,7 +380,10 @@ export default async function LandingPage() {
               Вхід
             </a>
           </nav>
-          <div className="text-xs">© {new Date().getFullYear()} Vitalyzer</div>
+          <div className="text-center text-xs sm:text-right">
+            <div>© {new Date().getFullYear()} Vitalyzer</div>
+            <div className="mt-2 text-text-muted/70">Приватність за замовчуванням</div>
+          </div>
         </div>
       </footer>
     </div>

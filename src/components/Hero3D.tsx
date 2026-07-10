@@ -1,77 +1,74 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
+// The canvas sits behind the hero with pointer-events: none (so CTA buttons stay
+// clickable), which means r3f's own pointer state never updates — track the mouse
+// on window instead and share it via a module-level ref.
 const mouse = { x: 0, y: 0 };
 
-function seededNoise(seed: number) {
-  const value = Math.sin(seed * 12.9898) * 43758.5453;
-  return value - Math.floor(value);
-}
-
-function NeuralShell() {
+// Particle sphere with an organic "breathing" displacement: each point oscillates
+// along its own radius with a phase derived from its position, so the surface
+// ripples like a living organism instead of rotating as a rigid ball.
+function ParticleSphere() {
   const points = useRef<THREE.Points>(null);
   const target = useRef({ x: 0, y: 0 });
 
-  const { positions, colors, directions, radii, phases } = useMemo(() => {
-    const count = 3400;
+  const { basePositions, positions, colors, phases } = useMemo(() => {
+    const count = 1800;
+    const basePositions = new Float32Array(count * 3);
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
-    const directions = new Float32Array(count * 3);
-    const radii = new Float32Array(count);
     const phases = new Float32Array(count);
     const accent = new THREE.Color('#34d399');
     const info = new THREE.Color('#60a5fa');
-    const warm = new THREE.Color('#fbbf24');
-
     for (let i = 0; i < count; i++) {
+      // Fibonacci sphere for even distribution
       const t = i / count;
       const inclination = Math.acos(1 - 2 * t);
       const azimuth = Math.PI * (1 + Math.sqrt(5)) * i;
-      const noise = seededNoise(i + 13);
-      const radius = 2.05 + noise * 0.22;
       const x = Math.sin(inclination) * Math.cos(azimuth);
       const y = Math.sin(inclination) * Math.sin(azimuth);
       const z = Math.cos(inclination);
-      directions[i * 3] = x;
-      directions[i * 3 + 1] = y;
-      directions[i * 3 + 2] = z;
-      radii[i] = radius;
-      phases[i] = seededNoise(i + 91) * Math.PI * 2;
-      positions[i * 3] = x * radius;
-      positions[i * 3 + 1] = y * radius;
-      positions[i * 3 + 2] = z * radius;
-
-      const c = accent.clone().lerp(info, Math.max(0, z * 0.5 + 0.5)).lerp(warm, noise * 0.18);
+      basePositions[i * 3] = x;
+      basePositions[i * 3 + 1] = y;
+      basePositions[i * 3 + 2] = z;
+      positions[i * 3] = x * 2.2;
+      positions[i * 3 + 1] = y * 2.2;
+      positions[i * 3 + 2] = z * 2.2;
+      phases[i] = x * 2.1 + y * 1.7 + z * 1.3;
+      const c = accent.clone().lerp(info, t);
       colors[i * 3] = c.r;
       colors[i * 3 + 1] = c.g;
       colors[i * 3 + 2] = c.b;
     }
-    return { positions, colors, directions, radii, phases };
+    return { basePositions, positions, colors, phases };
   }, []);
 
   useFrame(({ clock }, delta) => {
     const p = points.current;
     if (!p) return;
-    const attr = p.geometry.attributes.position as THREE.BufferAttribute;
-    const elapsed = clock.elapsedTime;
-    const breath = 1 + Math.sin(elapsed * 0.7) * 0.025;
+    const time = clock.elapsedTime;
 
-    for (let i = 0; i < radii.length; i++) {
-      const wave = Math.sin(elapsed * 1.45 + phases[i]) * 0.045;
-      const pulse = Math.sin(elapsed * 2.2 + i * 0.018) * 0.018;
-      const radius = (radii[i] + wave + pulse) * breath;
-      attr.setXYZ(i, directions[i * 3] * radius, directions[i * 3 + 1] * radius, directions[i * 3 + 2] * radius);
+    p.rotation.y += delta * 0.12;
+    // Ease toward pointer for a subtle parallax
+    target.current.x += (mouse.y * 0.35 - target.current.x) * 0.05;
+    target.current.y += (mouse.x * 0.35 - target.current.y) * 0.05;
+    p.rotation.x = target.current.x;
+    p.rotation.z = target.current.y * 0.3;
+
+    // Breathing surface: radius of each point oscillates with its own phase.
+    const attr = p.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const arr = attr.array as Float32Array;
+    for (let i = 0; i < phases.length; i++) {
+      const r = 2.2 + Math.sin(time * 1.1 + phases[i] * 2.4) * 0.14;
+      arr[i * 3] = basePositions[i * 3] * r;
+      arr[i * 3 + 1] = basePositions[i * 3 + 1] * r;
+      arr[i * 3 + 2] = basePositions[i * 3 + 2] * r;
     }
     attr.needsUpdate = true;
-
-    p.rotation.y += delta * 0.16;
-    target.current.x += (mouse.y * 0.34 - target.current.x) * 0.055;
-    target.current.y += (mouse.x * 0.42 - target.current.y) * 0.055;
-    p.rotation.x = target.current.x;
-    p.rotation.z = target.current.y * 0.24;
   });
 
   return (
@@ -80,119 +77,185 @@ function NeuralShell() {
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
         <bufferAttribute attach="attributes-color" args={[colors, 3]} />
       </bufferGeometry>
-      <pointsMaterial
-        size={0.022}
-        vertexColors
-        transparent
-        opacity={0.86}
-        sizeAttenuation
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-      />
+      <pointsMaterial size={0.028} vertexColors transparent opacity={0.85} sizeAttenuation depthWrite={false} />
     </points>
   );
 }
 
-function OrbitRings() {
-  const group = useRef<THREE.Group>(null);
+// A tilted ring of particles orbiting the sphere in the opposite direction —
+// reads as a "scanning" halo around the data core.
+function OrbitRing() {
+  const ring = useRef<THREE.Points>(null);
+
+  const positions = useMemo(() => {
+    const count = 420;
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2;
+      const r = 3.1 + (Math.random() - 0.5) * 0.22;
+      positions[i * 3] = Math.cos(a) * r;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 0.06;
+      positions[i * 3 + 2] = Math.sin(a) * r;
+    }
+    return positions;
+  }, []);
 
   useFrame(({ clock }, delta) => {
-    const g = group.current;
-    if (!g) return;
-    g.rotation.y += delta * 0.18;
-    g.rotation.x = Math.sin(clock.elapsedTime * 0.42) * 0.13 + mouse.y * 0.08;
-    g.rotation.z = Math.cos(clock.elapsedTime * 0.36) * 0.1 + mouse.x * 0.08;
+    const r = ring.current;
+    if (!r) return;
+    r.rotation.y -= delta * 0.35;
+    r.rotation.x = Math.PI / 3.2 + Math.sin(clock.elapsedTime * 0.4) * 0.08;
   });
 
   return (
-    <group ref={group}>
-      <mesh rotation={[Math.PI / 2.7, 0, Math.PI / 5]}>
-        <torusGeometry args={[2.48, 0.006, 8, 180]} />
-        <meshBasicMaterial color="#34d399" transparent opacity={0.28} blending={THREE.AdditiveBlending} depthWrite={false} />
-      </mesh>
-      <mesh rotation={[Math.PI / 2.1, Math.PI / 4, -Math.PI / 7]}>
-        <torusGeometry args={[2.18, 0.005, 8, 180]} />
-        <meshBasicMaterial color="#60a5fa" transparent opacity={0.24} blending={THREE.AdditiveBlending} depthWrite={false} />
-      </mesh>
-      <mesh rotation={[Math.PI / 1.9, -Math.PI / 5, Math.PI / 3]}>
-        <torusGeometry args={[1.66, 0.004, 8, 160]} />
-        <meshBasicMaterial color="#fbbf24" transparent opacity={0.18} blending={THREE.AdditiveBlending} depthWrite={false} />
-      </mesh>
-    </group>
+    <points ref={ring} rotation={[Math.PI / 3.2, 0, 0]}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+      </bufferGeometry>
+      <pointsMaterial size={0.022} color="#60a5fa" transparent opacity={0.55} sizeAttenuation depthWrite={false} />
+    </points>
   );
 }
 
-function Satellites() {
-  const group = useRef<THREE.Group>(null);
-
-  useFrame(({ clock }) => {
-    const g = group.current;
-    if (!g) return;
-    g.rotation.y = clock.elapsedTime * 0.42;
-    g.rotation.x = Math.sin(clock.elapsedTime * 0.5) * 0.18;
-  });
-
-  return (
-    <group ref={group}>
-      {[
-        ['#34d399', 2.55, 0],
-        ['#60a5fa', 2.2, Math.PI * 0.7],
-        ['#fbbf24', 1.72, Math.PI * 1.35],
-      ].map(([color, radius, angle]) => (
-        <mesh key={`${color}-${angle}`} position={[Math.cos(Number(angle)) * Number(radius), Math.sin(Number(angle)) * 0.62, Math.sin(Number(angle)) * Number(radius) * 0.32]}>
-          <sphereGeometry args={[0.045, 16, 16]} />
-          <meshBasicMaterial color={String(color)} transparent opacity={0.9} blending={THREE.AdditiveBlending} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
+// Two counter-rotating wireframe shells with a heartbeat pulse.
 function InnerCore() {
-  const group = useRef<THREE.Group>(null);
+  const outer = useRef<THREE.Mesh>(null);
+  const inner = useRef<THREE.Mesh>(null);
   useFrame(({ clock }) => {
-    const g = group.current;
-    if (!g) return;
-    const s = 1 + Math.sin(clock.elapsedTime * 1.25) * 0.055 + Math.sin(clock.elapsedTime * 2.4) * 0.018;
-    g.scale.setScalar(s);
-    g.rotation.y = clock.elapsedTime * 0.24;
-    g.rotation.x = Math.sin(clock.elapsedTime * 0.8) * 0.16;
+    const t = clock.elapsedTime;
+    // Double-beat like a heartbeat: sharp systole, soft diastole.
+    const beat = Math.pow(Math.max(0, Math.sin(t * 2.2)), 6) * 0.16 + Math.sin(t * 1.1) * 0.03;
+    if (outer.current) {
+      outer.current.scale.setScalar(1 + beat);
+      outer.current.rotation.y = t * 0.2;
+    }
+    if (inner.current) {
+      inner.current.scale.setScalar(1 + beat * 1.4);
+      inner.current.rotation.y = -t * 0.35;
+      inner.current.rotation.x = t * 0.15;
+    }
   });
   return (
-    <group ref={group}>
-      <mesh>
-        <icosahedronGeometry args={[1.12, 2]} />
-        <meshBasicMaterial color="#34d399" wireframe transparent opacity={0.34} blending={THREE.AdditiveBlending} />
+    <>
+      <mesh ref={outer}>
+        <icosahedronGeometry args={[1.15, 1]} />
+        <meshBasicMaterial color="#34d399" wireframe transparent opacity={0.28} />
       </mesh>
-      <mesh rotation={[0.4, 0.2, 0]}>
-        <dodecahedronGeometry args={[0.62, 0]} />
-        <meshBasicMaterial color="#60a5fa" wireframe transparent opacity={0.2} blending={THREE.AdditiveBlending} />
+      <mesh ref={inner}>
+        <icosahedronGeometry args={[0.7, 0]} />
+        <meshBasicMaterial color="#6ee7b7" wireframe transparent opacity={0.4} />
       </mesh>
-      <mesh>
-        <sphereGeometry args={[0.14, 32, 32]} />
-        <meshBasicMaterial color="#d1fae5" transparent opacity={0.92} blending={THREE.AdditiveBlending} />
-      </mesh>
-    </group>
+    </>
   );
+}
+
+// r3f mounts the scene only after react-use-measure reports a non-zero size, and
+// react-use-measure relies on ResizeObserver callbacks. Some embedded browsers
+// never deliver those callbacks, so the canvas would stay at its 300x150 default
+// forever. This hybrid observer (passed via Canvas `resize.polyfill`) delegates
+// to the native RO when it works and additionally self-triggers on mount and on
+// window resize — spurious triggers are harmless (they just cause a re-measure).
+class HybridResizeObserver {
+  private cb: ResizeObserverCallback;
+  private native: ResizeObserver | null;
+  private targets = new Set<Element>();
+  private onResize = () => this.fire();
+
+  constructor(cb: ResizeObserverCallback) {
+    this.cb = cb;
+    this.native = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(cb) : null;
+  }
+
+  private fire() {
+    const entries = Array.from(this.targets).map(
+      (target) => ({ target, contentRect: target.getBoundingClientRect() }) as unknown as ResizeObserverEntry
+    );
+    if (entries.length) this.cb(entries, this as unknown as ResizeObserver);
+  }
+
+  observe(target: Element) {
+    this.native?.observe(target);
+    if (this.targets.size === 0) window.addEventListener('resize', this.onResize);
+    this.targets.add(target);
+    // Initial + delayed re-measure (layout may settle after fonts/hydration).
+    requestAnimationFrame(() => this.fire());
+    setTimeout(() => this.fire(), 350);
+  }
+
+  unobserve(target: Element) {
+    this.native?.unobserve(target);
+    this.targets.delete(target);
+    if (this.targets.size === 0) window.removeEventListener('resize', this.onResize);
+  }
+
+  disconnect() {
+    this.native?.disconnect();
+    this.targets.clear();
+    window.removeEventListener('resize', this.onResize);
+  }
+}
+
+// Gentle camera float so the whole scene drifts even when the cursor is idle.
+function CameraDrift() {
+  useFrame(({ camera, clock }) => {
+    const t = clock.elapsedTime;
+    camera.position.x = Math.sin(t * 0.25) * 0.25;
+    camera.position.y = Math.cos(t * 0.2) * 0.18;
+    camera.lookAt(0, 0, 0);
+  });
+  return null;
+}
+
+// WebGL on machines without GPU acceleration falls back to a software rasterizer
+// (SwiftShader/llvmpipe) that can freeze the whole renderer on a full-hero canvas.
+// Probe once and skip the 3D scene there — the page still has its CSS orb
+// animations, so the fallback is graceful.
+function isHardwareAccelerated(): boolean {
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    if (!gl) return false;
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    const renderer = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
+    (gl.getExtension('WEBGL_lose_context') as { loseContext?: () => void } | null)?.loseContext?.();
+    return !/swiftshader|llvmpipe|software|basic render/i.test(renderer);
+  } catch {
+    return false;
+  }
 }
 
 export default function Hero3D({ className }: { className?: string }) {
+  const [enabled, setEnabled] = React.useState(false);
+
   useEffect(() => {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setEnabled(!reducedMotion && isHardwareAccelerated());
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) return;
     function onMove(e: MouseEvent) {
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -((e.clientY / window.innerHeight) * 2 - 1);
     }
     window.addEventListener('mousemove', onMove);
     return () => window.removeEventListener('mousemove', onMove);
-  }, []);
+  }, [enabled]);
+
+  if (!enabled) return null;
 
   return (
     <div className={className} aria-hidden>
-      <Canvas camera={{ position: [0, 0, 5.4], fov: 54 }} dpr={[1, 1.8]} gl={{ alpha: true, antialias: true }}>
-        <OrbitRings />
-        <NeuralShell />
-        <Satellites />
+      <Canvas
+        camera={{ position: [0, 0, 5.2], fov: 55 }}
+        dpr={[1, 1.25]}
+        gl={{ alpha: true, antialias: false, powerPreference: 'low-power' }}
+        resize={{ polyfill: HybridResizeObserver as unknown as typeof ResizeObserver }}
+      >
+        <ParticleSphere />
+        <OrbitRing />
         <InnerCore />
+        <CameraDrift />
       </Canvas>
     </div>
   );
