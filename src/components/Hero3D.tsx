@@ -117,6 +117,109 @@ function OrbitRing() {
   );
 }
 
+function SignalLattice() {
+  const lines = useRef<THREE.LineSegments>(null);
+
+  const { positions, colors, phases } = useMemo(() => {
+    const nodeCount = 42;
+    const edgeCount = 74;
+    const nodes: THREE.Vector3[] = [];
+    const positions = new Float32Array(edgeCount * 2 * 3);
+    const colors = new Float32Array(edgeCount * 2 * 3);
+    const phases = new Float32Array(edgeCount);
+    const accent = new THREE.Color('#6ee7b7');
+    const info = new THREE.Color('#60a5fa');
+
+    for (let i = 0; i < nodeCount; i++) {
+      const t = i / nodeCount;
+      const inclination = Math.acos(1 - 2 * t);
+      const azimuth = Math.PI * (1 + Math.sqrt(5)) * i;
+      const radius = 1.26 + Math.sin(i * 4.7) * 0.1;
+      nodes.push(
+        new THREE.Vector3(
+          Math.sin(inclination) * Math.cos(azimuth) * radius,
+          Math.sin(inclination) * Math.sin(azimuth) * radius,
+          Math.cos(inclination) * radius,
+        ),
+      );
+    }
+
+    for (let i = 0; i < edgeCount; i++) {
+      const a = i % nodeCount;
+      const b = (i * 13 + 7) % nodeCount;
+      const ca = accent.clone().lerp(info, (i % 9) / 8);
+      positions.set(nodes[a].toArray(), i * 6);
+      positions.set(nodes[b].toArray(), i * 6 + 3);
+      colors.set(ca.toArray(), i * 6);
+      colors.set(ca.toArray(), i * 6 + 3);
+      phases[i] = i * 0.37;
+    }
+
+    return { positions, colors, phases };
+  }, []);
+
+  useFrame(({ clock }, delta) => {
+    const l = lines.current;
+    if (!l) return;
+    const t = clock.elapsedTime;
+    l.rotation.y -= delta * 0.08;
+    l.rotation.x = Math.sin(t * 0.31) * 0.12;
+    const colorAttr = l.geometry.getAttribute('color') as THREE.BufferAttribute;
+    const arr = colorAttr.array as Float32Array;
+
+    for (let i = 0; i < phases.length; i++) {
+      const pulse = 0.5 + Math.pow(Math.max(0, Math.sin(t * 1.45 + phases[i])), 3) * 0.7;
+      const offset = i * 6;
+      arr[offset] = 0.42 * pulse;
+      arr[offset + 1] = 0.9 * pulse;
+      arr[offset + 2] = 0.74 * pulse;
+      arr[offset + 3] = 0.26 * pulse;
+      arr[offset + 4] = 0.62 * pulse;
+      arr[offset + 5] = 1;
+    }
+    colorAttr.needsUpdate = true;
+  });
+
+  return (
+    <lineSegments ref={lines}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
+      </bufferGeometry>
+      <lineBasicMaterial vertexColors transparent opacity={0.34} blending={THREE.AdditiveBlending} depthWrite={false} />
+    </lineSegments>
+  );
+}
+
+function PulseRings() {
+  const group = useRef<THREE.Group>(null);
+
+  useFrame(({ clock }) => {
+    const g = group.current;
+    if (!g) return;
+    const t = clock.elapsedTime;
+    g.children.forEach((child, index) => {
+      const progress = (t * 0.34 + index / 3) % 1;
+      const scale = 0.72 + progress * 2.35;
+      child.scale.setScalar(scale);
+      child.rotation.z = t * (0.12 + index * 0.03);
+      const material = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      material.opacity = (1 - progress) * 0.26;
+    });
+  });
+
+  return (
+    <group ref={group} rotation={[Math.PI / 2.35, 0.18, -0.28]}>
+      {[0, 1, 2].map((i) => (
+        <mesh key={i}>
+          <torusGeometry args={[0.72, 0.006, 8, 150]} />
+          <meshBasicMaterial color={i === 1 ? '#60a5fa' : '#34d399'} transparent opacity={0.2} blending={THREE.AdditiveBlending} depthWrite={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 // Two counter-rotating wireframe shells with a heartbeat pulse.
 function InnerCore() {
   const outer = useRef<THREE.Mesh>(null);
@@ -253,7 +356,9 @@ export default function Hero3D({ className }: { className?: string }) {
         resize={{ polyfill: HybridResizeObserver as unknown as typeof ResizeObserver }}
       >
         <ParticleSphere />
+        <SignalLattice />
         <OrbitRing />
+        <PulseRings />
         <InnerCore />
         <CameraDrift />
       </Canvas>

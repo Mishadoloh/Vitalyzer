@@ -117,6 +117,63 @@ function DataSparkles() {
   );
 }
 
+function SignalComets() {
+  const group = useRef<THREE.Group>(null);
+  const comets = useMemo(
+    () =>
+      [
+        { color: '#d1fae5', phase: 0.1, lane: -0.42, speed: 0.82 },
+        { color: '#6ee7b7', phase: 1.4, lane: 0.1, speed: 0.62 },
+        { color: '#60a5fa', phase: 2.7, lane: 0.38, speed: 0.72 },
+      ].map((item) => {
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(18), 3));
+        const material = new THREE.LineBasicMaterial({
+          color: item.color,
+          transparent: true,
+          opacity: 0.7,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        });
+        return { ...item, line: new THREE.Line(geometry, material) };
+      }),
+    [],
+  );
+
+  useFrame(({ clock }) => {
+    const g = group.current;
+    if (!g) return;
+    const elapsed = clock.elapsedTime;
+    g.rotation.y = Math.sin(elapsed * 0.24) * 0.18;
+
+    g.children.forEach((child, index) => {
+      const comet = comets[index];
+      const attr = (comet.line.geometry.attributes.position as THREE.BufferAttribute);
+      const head = ((elapsed * comet.speed + comet.phase) % 4.4) - 2.2;
+
+      for (let i = 0; i < 6; i++) {
+        const tail = i * 0.12;
+        const x = head - tail;
+        const y = comet.lane + Math.sin((x + elapsed * 0.72) * 2.2 + comet.phase) * 0.18;
+        const z = Math.cos((x + comet.phase) * 1.7) * 0.32;
+        attr.setXYZ(i, x, y, z);
+      }
+
+      attr.needsUpdate = true;
+      const material = (child as THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>).material;
+      material.opacity = 0.34 + Math.max(0, Math.sin(elapsed * 1.6 + comet.phase)) * 0.42;
+    });
+  });
+
+  return (
+    <group ref={group}>
+      {comets.map(({ line }, index) => (
+        <primitive key={index} object={line} />
+      ))}
+    </group>
+  );
+}
+
 function OrbitingMetrics() {
   const group = useRef<THREE.Group>(null);
   const nodes = useMemo(
@@ -169,6 +226,10 @@ function CoreSignal() {
 
   return (
     <group ref={group}>
+      <mesh rotation={[Math.PI / 2.18, 0.2, -0.18]}>
+        <torusGeometry args={[1.48, 0.004, 8, 160]} />
+        <meshBasicMaterial color="#d1fae5" transparent opacity={0.18} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
       <mesh rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[1.18, 0.012, 10, 140]} />
         <meshBasicMaterial color="#34d399" transparent opacity={0.58} blending={THREE.AdditiveBlending} depthWrite={false} />
@@ -195,6 +256,7 @@ export default function CtaData3D({ className }: { className?: string }) {
       <Canvas camera={{ position: [0, 0, 3.65], fov: 44 }} dpr={[1, 1.6]} gl={{ alpha: true, antialias: true }}>
         <group scale={1.08}>
           <DataSparkles />
+          <SignalComets />
           <DataWave />
           <CoreSignal />
           <OrbitingMetrics />
