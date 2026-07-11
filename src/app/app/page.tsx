@@ -104,6 +104,7 @@ export default function DashboardPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [today, setToday] = useState('');
   const [todayKey, setTodayKey] = useState('');
+
   const totalEntries = sleep.length + workouts.length + nutrition.length + weight.length + mood.length;
   const hasAnyData = totalEntries > 0;
   const todayItems = [
@@ -130,9 +131,7 @@ export default function DashboardPage() {
   const hasBalanceScore = [balanceScores.sleep, balanceScores.workouts, balanceScores.nutrition].some((value) => value !== null);
 
   useEffect(() => {
-    setToday(
-      new Date().toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', weekday: 'long' })
-    );
+    setToday(new Date().toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', weekday: 'long' }));
     setTodayKey(todayISO());
     loadAll(false);
   }, []);
@@ -141,13 +140,13 @@ export default function DashboardPage() {
     setLoadingAdvice(true);
     try {
       const [adviceRes, sleepRes, workoutsRes, nutritionRes, weightRes, moodRes, settingsRes] = await Promise.all([
-        fetch(`/api/advice${force ? '?force=true' : ''}`).then((r) => r.json()),
-        fetch('/api/sleep').then((r) => r.json()),
-        fetch('/api/workouts').then((r) => r.json()),
-        fetch('/api/nutrition').then((r) => r.json()),
-        fetch('/api/weight').then((r) => r.json()),
-        fetch('/api/mood').then((r) => r.json()),
-        fetch('/api/settings').then((r) => r.json()),
+        fetch(`/api/advice${force ? '?force=true' : ''}`).then((response) => response.json()),
+        fetch('/api/sleep').then((response) => response.json()),
+        fetch('/api/workouts').then((response) => response.json()),
+        fetch('/api/nutrition').then((response) => response.json()),
+        fetch('/api/weight').then((response) => response.json()),
+        fetch('/api/mood').then((response) => response.json()),
+        fetch('/api/settings').then((response) => response.json()),
       ]);
       if (adviceRes.warning) showToast(adviceRes.warning, true);
       setAdvice(adviceRes);
@@ -167,9 +166,9 @@ export default function DashboardPage() {
   async function seedDemoData() {
     setSeedingDemo(true);
     try {
-      const res = await fetch('/api/demo-data', { method: 'POST' });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Не вдалося додати демо-дані');
+      const response = await fetch('/api/demo-data', { method: 'POST' });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Не вдалося додати демо-дані');
       showToast(result.message || 'Демо-дані додано');
       await loadAll(true);
     } catch (e) {
@@ -180,22 +179,20 @@ export default function DashboardPage() {
   }
 
   return (
-    <section>
-      <header className="mb-4.5 flex flex-wrap items-baseline justify-between gap-3">
+    <section className="pb-8">
+      <header className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-border bg-bg-card p-4">
         <div>
-          <h1 className="m-0 text-[22px]">Щоденний дашборд</h1>
-          <p className="mt-1 text-sm text-text-muted">Один погляд на сон, активність, харчування, вагу й настрій.</p>
+          <p className="mb-1 text-xs font-medium text-accent">{today}</p>
+          <h1 className="m-0 text-[22px] text-text">Щоденний дашборд</h1>
+          <p className="mt-1 max-w-2xl text-sm text-text-muted">Один погляд на сон, активність, харчування, вагу й настрій.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-sm text-text-muted">{today}</div>
-          <Link
-            href="/app/quick-add"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-accent-strong px-3.5 py-1.5 text-[13px] font-semibold text-[#06281c]"
-          >
-            <PlusCircle size={14} />
-            Швидкий запис
-          </Link>
-        </div>
+        <Link
+          href="/app/quick-add"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-accent-strong px-4 py-2.5 text-[13px] font-semibold text-[#06281c]"
+        >
+          <PlusCircle size={15} />
+          Швидкий запис
+        </Link>
       </header>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
@@ -217,11 +214,11 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto]">
+      <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_240px]">
         <div className="rounded-2xl border border-border bg-bg-card p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-[15px] font-semibold">План на сьогодні</h2>
+              <h2 className="text-[15px] font-semibold text-text">План на сьогодні</h2>
               <p className="mt-1 text-xs text-text-muted">
                 Заповнено {doneToday} з {todayItems.length}. Додайте відсутні показники, щоб порада була точнішою.
               </p>
@@ -255,7 +252,7 @@ export default function DashboardPage() {
         <button
           onClick={seedDemoData}
           disabled={seedingDemo}
-          className="rounded-2xl border border-accent/30 bg-accent/10 px-5 py-4 text-left transition-colors hover:border-accent/60 disabled:opacity-60 lg:w-[220px]"
+          className="rounded-2xl border border-accent/30 bg-accent/10 p-4 text-left transition-colors hover:border-accent/60 disabled:opacity-60"
         >
           <Sparkles size={18} className="mb-3 text-accent" />
           <span className="block text-sm font-semibold text-text">{seedingDemo ? 'Додаємо демо...' : 'Заповнити демо-даними'}</span>
@@ -264,29 +261,28 @@ export default function DashboardPage() {
       </div>
 
       {!loadingAdvice && !hasAnyData && (
-        <div className="mb-4 overflow-hidden rounded-2xl border border-accent/25 bg-gradient-to-br from-bg-card to-bg-elevated">
+        <div className="mb-4 overflow-hidden rounded-2xl border border-accent/25 bg-bg-card">
           <div className="grid grid-cols-1 gap-5 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[12px] text-accent">
                 <Sparkles size={13} />
                 Старт за 2 хвилини
               </span>
-              <h2 className="mt-4 text-xl font-semibold">Додайте перші дані, і дашборд оживе</h2>
+              <h2 className="mt-4 text-xl font-semibold text-text">Додайте перші дані, і дашборд оживе</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-                Можна внести один запис вручну, імпортувати файл або завантажити демо-дані. Після цього Vitalyzer
-                побудує графіки, баланс тижня й щоденну пораду.
+                Можна внести один запис вручну, імпортувати файл або завантажити демо-дані. Після цього Vitalyzer побудує графіки, баланс тижня й щоденну пораду.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:w-[430px]">
-              <Link href="/app/quick-add" className="rounded-xl border border-border bg-bg/50 p-3 text-sm hover:border-accent/50">
+              <Link href="/app/quick-add" className="rounded-xl border border-border bg-bg-elevated p-3 text-sm hover:border-accent/50">
                 <PlusCircle size={17} className="mb-2 text-accent" />
                 Швидкий запис
               </Link>
-              <Link href="/app/import" className="rounded-xl border border-border bg-bg/50 p-3 text-sm hover:border-accent/50">
+              <Link href="/app/import" className="rounded-xl border border-border bg-bg-elevated p-3 text-sm hover:border-accent/50">
                 <UploadCloud size={17} className="mb-2 text-info" />
                 Імпорт файлу
               </Link>
-              <button onClick={seedDemoData} disabled={seedingDemo} className="rounded-xl border border-border bg-bg/50 p-3 text-left text-sm hover:border-accent/50 disabled:opacity-60">
+              <button onClick={seedDemoData} disabled={seedingDemo} className="rounded-xl border border-border bg-bg-elevated p-3 text-left text-sm hover:border-accent/50 disabled:opacity-60">
                 <Sparkles size={17} className="mb-2 text-warn" />
                 {seedingDemo ? 'Додаємо...' : 'Демо-дані'}
               </button>
@@ -299,7 +295,17 @@ export default function DashboardPage() {
 
       {advice && <ScoreRow advice={advice} />}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="mb-3 mt-5 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-[16px] font-semibold text-text">Аналітика за 14 днів</h2>
+          <p className="mt-1 text-xs text-text-muted">Графіки показують не окремі цифри, а ритм: сон, навантаження, харчування, вагу й настрій.</p>
+        </div>
+        <Link href="/app/trends" className="rounded-lg border border-border px-3 py-2 text-xs text-text-muted hover:border-accent hover:text-accent">
+          Відкрити тренди
+        </Link>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard title="Сон, год (14 днів)" empty={!loadingAdvice && sleep.length === 0} actionHref="/app/quick-add">
           <SleepChart sleepAll={sleep} target={settings?.sleepTarget ?? 8} />
         </ChartCard>
@@ -335,11 +341,12 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative min-h-[260px] overflow-hidden rounded-2xl border border-border bg-bg-card p-4">
-      <div className="mb-2.5 flex items-center justify-between gap-3">
-        <h3 className="text-[13.5px] font-semibold text-text-muted">{title}</h3>
+    <div className="relative min-h-[300px] overflow-hidden rounded-2xl border border-border bg-bg-card p-4 shadow-sm shadow-black/10">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-[13.5px] font-semibold text-text">{title}</h3>
         {empty && (
-          <Link href={actionHref} className="text-xs text-accent underline">
+          <Link href={actionHref} className="inline-flex items-center gap-1 text-xs text-accent underline">
+            <PlusCircle size={13} />
             додати
           </Link>
         )}

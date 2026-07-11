@@ -14,13 +14,14 @@ export default function SleepChart({ sleepAll, target, days = 14 }: { sleepAll: 
     hours: byDate[d] ? byDate[d].hours : null,
     target,
   }));
+  const xInterval = Math.max(1, Math.ceil(days / 6) - 1);
 
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <ComposedChart data={data}>
+      <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 4, left: -8 }}>
         <CartesianGrid stroke={GRID} vertical={false} />
-        <XAxis dataKey="label" tick={{ fill: TEXT, fontSize: 10 }} axisLine={{ stroke: GRID }} tickLine={false} interval={Math.floor(days / 8)} />
-        <YAxis tick={{ fill: TEXT, fontSize: 10 }} axisLine={{ stroke: GRID }} tickLine={false} />
+        <XAxis dataKey="label" tick={{ fill: TEXT, fontSize: 9 }} axisLine={{ stroke: GRID }} tickLine={false} interval={xInterval} minTickGap={8} />
+        <YAxis width={30} tick={{ fill: TEXT, fontSize: 10 }} axisLine={{ stroke: GRID }} tickLine={false} />
         <Tooltip contentStyle={{ background: '#161922', border: '1px solid #2a2f3d', borderRadius: 8, fontSize: 12 }} />
         <Bar dataKey="hours" radius={[4, 4, 0, 0]}>
           {data.map((d, i) => (

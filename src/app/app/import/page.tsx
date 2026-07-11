@@ -1,7 +1,22 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  Activity,
+  CheckCircle2,
+  ChevronDown,
+  Database,
+  Dumbbell,
+  Moon,
+  Plus,
+  Scale,
+  Sparkles,
+  UploadCloud,
+  Utensils,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { buildRecords, detectType, FIELD_ALIASES, guessMapping, readFileAsRows } from '@/lib/parser';
 import type { EntryType, FieldMapping } from '@/lib/types';
 import { showToast } from '@/lib/toast';
@@ -10,33 +25,35 @@ const FIELD_LABELS: Record<string, string> = {
   date: 'Дата',
   hours: 'Години сну',
   quality: 'Якість сну',
-  bedtime: 'Час відходу до сну',
-  wakeTime: 'Час пробудження',
+  bedtime: 'Час сну',
+  wakeTime: 'Пробудження',
   type: 'Тип тренування',
   durationMin: 'Тривалість, хв',
   calories: 'Калорії',
   intensity: 'Інтенсивність',
   avgHR: 'Середній пульс',
   distanceKm: 'Дистанція, км',
-  proteinG: 'Білки, г',
+  proteinG: 'Білок, г',
   carbsG: 'Вуглеводи, г',
   fatG: 'Жири, г',
   waterMl: 'Вода, мл',
   weightKg: 'Вага, кг',
-  bodyFatPct: '% жиру в тілі',
-  mood: 'Настрій (1-5)',
-  energy: 'Енергія (1-5)',
-  stress: 'Стрес (1-5)',
+  bodyFatPct: '% жиру',
+  mood: 'Настрій',
+  energy: 'Енергія',
+  stress: 'Стрес',
   notes: 'Нотатки',
 };
 
-const TYPE_LABELS: Record<EntryType, string> = {
-  sleep: 'Сон',
-  workouts: 'Тренування',
-  nutrition: 'Харчування',
-  weight: 'Вага',
-  mood: 'Настрій',
+const TYPE_META: Record<EntryType, { label: string; hint: string; icon: LucideIcon; required: string[] }> = {
+  sleep: { label: 'Сон', hint: 'дата, години, якість', icon: Moon, required: ['date', 'hours'] },
+  workouts: { label: 'Тренування', hint: 'дата, тип, хвилини', icon: Dumbbell, required: ['date', 'type', 'durationMin'] },
+  nutrition: { label: 'Харчування', hint: 'дата, калорії, білок', icon: Utensils, required: ['date', 'calories', 'proteinG'] },
+  weight: { label: 'Вага', hint: 'дата, кг', icon: Scale, required: ['date', 'weightKg'] },
+  mood: { label: 'Настрій', hint: 'дата, настрій, енергія', icon: Activity, required: ['date', 'mood', 'energy'] },
 };
+
+const TYPES = Object.keys(TYPE_META) as EntryType[];
 
 interface QueueItem {
   id: string;
@@ -52,86 +69,115 @@ function uid() {
   return 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
+function getOptionalFields(type: EntryType) {
+  const required = new Set(TYPE_META[type].required);
+  return Object.keys(FIELD_ALIASES[type]).filter((field) => !required.has(field));
+}
+
 export default function ImportPage() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [modalItemId, setModalItemId] = useState<string | null>(null);
+  const [preferredType, setPreferredType] = useState<EntryType>('sleep');
   const [mapType, setMapType] = useState<EntryType>('sleep');
   const [mapping, setMapping] = useState<FieldMapping>({});
+  const [showOptional, setShowOptional] = useState(false);
+  const [seedingDemo, setSeedingDemo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  const modalItem = queue.find((item) => item.id === modalItemId);
+  const completedCount = queue.filter((item) => item.status === 'ok').length;
+  const requiredFields = TYPE_META[mapType].required;
+  const optionalFields = getOptionalFields(mapType);
+  const mappedRequired = requiredFields.filter((field) => mapping[field]).length;
+  const canImport = Boolean(mapping.date) && mappedRequired >= Math.min(2, requiredFields.length);
+
+  const fileSummary = useMemo(() => {
+    if (!modalItem) return null;
+    return {
+      rows: modalItem.rows?.length ?? 0,
+      headers: modalItem.headers?.length ?? 0,
+      mapped: Object.values(mapping).filter(Boolean).length,
+      total: Object.keys(FIELD_ALIASES[mapType]).length,
+    };
+  }, [mapType, mapping, modalItem]);
+
   function updateItem(id: string, patch: Partial<QueueItem>) {
-    setQueue((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+    setQueue((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  }
+
+  function openReview(item: QueueItem, type: EntryType) {
+    setModalItemId(item.id);
+    setMapType(type);
+    setMapping(guessMapping(type, item.headers || []));
+    setShowOptional(false);
   }
 
   async function handleFiles(files: File[]) {
-    const newItems: QueueItem[] = files.map((f) => ({ id: uid(), fileName: f.name, status: 'pending' }));
-    setQueue((prev) => [...prev, ...newItems]);
+    const allowed = files.filter((file) => /\.(csv|xlsx|xls)$/i.test(file.name));
+    if (!allowed.length) {
+      showToast('Оберіть CSV або Excel файл', true);
+      return;
+    }
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const id = newItems[i].id;
+    const pendingItems: QueueItem[] = allowed.map((file) => ({ id: uid(), fileName: file.name, status: 'pending' }));
+    setQueue((prev) => [...prev, ...pendingItems]);
+
+    for (let index = 0; index < allowed.length; index++) {
+      const file = allowed[index];
+      const item = pendingItems[index];
       try {
         const { headers, rows } = await readFileAsRows(file);
         if (!headers.length || !rows.length) {
-          updateItem(id, { status: 'error', note: 'Файл порожній або не розпізнано' });
+          updateItem(item.id, { status: 'error', note: 'Файл порожній або не розпізнано' });
           continue;
         }
-        const guessedType = detectType(headers) || 'nutrition';
-        updateItem(id, { status: 'awaiting-review', headers, rows, guessedType });
+        const guessedType = detectType(headers) || preferredType;
+        const readyItem = { ...item, status: 'awaiting-review' as const, headers, rows, guessedType };
+        updateItem(item.id, readyItem);
+        if (!modalItemId) openReview(readyItem, guessedType);
       } catch (e) {
-        updateItem(id, { status: 'error', note: e instanceof Error ? e.message : 'Помилка читання файлу' });
+        updateItem(item.id, { status: 'error', note: e instanceof Error ? e.message : 'Помилка читання файлу' });
       }
     }
-    openNextIfIdle();
   }
 
-  function openNextIfIdle() {
-    setQueue((prev) => {
-      setModalItemId((currentModal) => {
-        if (currentModal) return currentModal;
-        const next = prev.find((it) => it.status === 'awaiting-review');
-        if (next) {
-          setMapType(next.guessedType || 'sleep');
-          setMapping(guessMapping(next.guessedType || 'sleep', next.headers || []));
-        }
-        return next ? next.id : null;
-      });
-      return prev;
-    });
-  }
-
-  function onFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || []);
+  function onFileInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files || []);
     if (files.length) handleFiles(files);
-    e.target.value = '';
+    event.target.value = '';
   }
 
-  function onDrop(e: React.DragEvent) {
-    e.preventDefault();
+  function onDrop(event: React.DragEvent) {
+    event.preventDefault();
     setDragOver(false);
-    const files = Array.from(e.dataTransfer.files).filter((f) => /\.(csv|xlsx|xls)$/i.test(f.name));
-    if (files.length) handleFiles(files);
+    handleFiles(Array.from(event.dataTransfer.files));
   }
 
   function changeMapType(type: EntryType) {
-    const item = queue.find((it) => it.id === modalItemId);
     setMapType(type);
-    setMapping(guessMapping(type, item?.headers || []));
+    setPreferredType(type);
+    setMapping(guessMapping(type, modalItem?.headers || []));
+    setShowOptional(false);
+  }
+
+  function openNextReview() {
+    const next = queue.find((item) => item.status === 'awaiting-review' && item.id !== modalItemId);
+    if (next) openReview(next, next.guessedType || preferredType);
   }
 
   function cancelModal() {
     if (modalItemId) updateItem(modalItemId, { status: 'error', note: 'Скасовано' });
     setModalItemId(null);
-    setTimeout(openNextIfIdle, 0);
+    setTimeout(openNextReview, 0);
   }
 
   async function confirmModal() {
-    const item = queue.find((it) => it.id === modalItemId);
+    const item = queue.find((queueItem) => queueItem.id === modalItemId);
     if (!item) return;
     if (!mapping.date) {
-      showToast('Оберіть колонку з датою — без неї імпорт неможливий.', true);
+      showToast('Оберіть колонку з датою. Без неї імпорт неможливий.', true);
       return;
     }
 
@@ -140,217 +186,224 @@ export default function ImportPage() {
       updateItem(item.id, { status: 'error', note: 'Не вдалося розпізнати жодного запису' });
     } else {
       try {
-        const res = await fetch('/api/import', {
+        const response = await fetch('/api/import', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ type: mapType, records }),
         });
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.error || 'Помилка імпорту');
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Помилка імпорту');
         updateItem(item.id, {
           status: 'ok',
-          note: `${TYPE_LABELS[mapType]}: додано ${result.added}, оновлено ${result.updated}${skipped ? `, пропущено ${skipped}` : ''}`,
+          note: `${TYPE_META[mapType].label}: додано ${result.added}, оновлено ${result.updated}${skipped ? `, пропущено ${skipped}` : ''}`,
         });
-        showToast(`Імпортовано «${item.fileName}»`);
+        showToast(`Імпортовано "${item.fileName}"`);
       } catch (e) {
         updateItem(item.id, { status: 'error', note: e instanceof Error ? e.message : 'Помилка імпорту' });
       }
     }
 
     setModalItemId(null);
-    setTimeout(openNextIfIdle, 0);
+    setTimeout(openNextReview, 0);
   }
 
-  async function loadSampleData() {
-    const today = new Date();
-    const iso = (offset: number) => {
-      const d = new Date(today);
-      d.setDate(d.getDate() - offset);
-      return d.toISOString().slice(0, 10);
-    };
-
-    const sleepRecords = [];
-    const workoutRecords = [];
-    const nutritionRecords = [];
-    const weightRecords = [];
-    const moodRecords = [];
-
-    let weight = 78;
-    for (let i = 13; i >= 0; i--) {
-      const date = iso(i);
-      const isWorkoutDay = i % 2 === 0;
-      const hours = Math.round((6.2 + Math.random() * 2.2) * 10) / 10;
-      sleepRecords.push({
-        date,
-        hours,
-        quality: Math.round((3 + Math.random() * 2) * 10) / 10,
-      });
-      if (isWorkoutDay) {
-        workoutRecords.push({
-          date,
-          type: i % 4 === 0 ? 'Силове тренування' : 'Біг',
-          durationMin: 35 + Math.round(Math.random() * 40),
-          calories: 250 + Math.round(Math.random() * 300),
-          avgHR: 120 + Math.round(Math.random() * 30),
-          distanceKm: i % 4 === 0 ? null : Math.round((4 + Math.random() * 6) * 10) / 10,
-        });
-      }
-      nutritionRecords.push({
-        date,
-        calories: 1900 + Math.round(Math.random() * 700),
-        proteinG: 90 + Math.round(Math.random() * 60),
-        carbsG: 180 + Math.round(Math.random() * 100),
-        fatG: 60 + Math.round(Math.random() * 40),
-        waterMl: 1400 + Math.round(Math.random() * 1200),
-      });
-      weight = Math.round((weight - 0.03 + (Math.random() - 0.5) * 0.4) * 10) / 10;
-      weightRecords.push({ date, weightKg: weight, bodyFatPct: null });
-      moodRecords.push({
-        date,
-        mood: Math.max(1, Math.min(5, Math.round(3 + (hours - 7.5) * 0.8 + (Math.random() - 0.5)))),
-        energy: Math.max(1, Math.min(5, Math.round(3 + (hours - 7.5) * 0.9 + (Math.random() - 0.5)))),
-        stress: Math.round(2 + Math.random() * 2),
-      });
-    }
-
+  async function loadDemoData() {
+    setSeedingDemo(true);
     try {
-      await Promise.all([
-        fetch('/api/import', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ type: 'sleep', records: sleepRecords }),
-        }),
-        fetch('/api/import', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ type: 'workouts', records: workoutRecords }),
-        }),
-        fetch('/api/import', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ type: 'nutrition', records: nutritionRecords }),
-        }),
-        fetch('/api/import', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ type: 'weight', records: weightRecords }),
-        }),
-        fetch('/api/import', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ type: 'mood', records: moodRecords }),
-        }),
-      ]);
-      showToast('Приклад даних завантажено (14 днів)');
+      const response = await fetch('/api/demo-data', { method: 'POST' });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Не вдалося додати демо-дані');
+      showToast(result.message || 'Демо-дані додано');
       router.push('/app');
     } catch (e) {
-      showToast('Не вдалося завантажити приклад даних: ' + (e instanceof Error ? e.message : String(e)), true);
+      showToast(e instanceof Error ? e.message : String(e), true);
+    } finally {
+      setSeedingDemo(false);
     }
   }
-
-  const modalItem = queue.find((it) => it.id === modalItemId);
 
   return (
     <section>
       <header className="mb-4.5">
         <h1 className="m-0 text-[22px]">Імпорт даних</h1>
+        <p className="mt-1 max-w-2xl text-sm text-text-muted">
+          Завантажте CSV або Excel з телефона чи комп'ютера. Ми автоматично знайдемо колонки, а вам лишиться швидко перевірити відповідність.
+        </p>
       </header>
-      <p className="text-text-muted">
-        Завантажте CSV або Excel-файли з вашого трекера (наприклад, експорти з Apple Health, Google Fit, Strava,
-        MyFitnessPal, Excel-щоденник тощо). Застосунок автоматично спробує визначити тип даних (сон / тренування /
-        харчування) і поля — ви зможете перевірити відповідність перед імпортом.
-      </p>
+
+      <div className="mb-4 grid grid-cols-3 gap-2 text-center text-[11px] text-text-muted sm:grid-cols-3">
+        <Step number="1" label="Тип" active />
+        <Step number="2" label="Файл" active={queue.length > 0} />
+        <Step number="3" label="Перевірка" active={completedCount > 0} />
+      </div>
+
+      <div className="mb-4 rounded-2xl border border-border bg-bg-card p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-[15px] font-semibold text-text">Що імпортуємо?</h2>
+            <p className="text-xs text-text-muted">Якщо файл зрозумілий, тип визначиться автоматично.</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {TYPES.map((type) => {
+            const meta = TYPE_META[type];
+            const Icon = meta.icon;
+            return (
+              <button
+                key={type}
+                onClick={() => setPreferredType(type)}
+                className={`rounded-xl border p-3 text-left transition-colors ${
+                  preferredType === type ? 'border-accent bg-accent/10 text-accent' : 'border-border bg-bg-elevated text-text-muted hover:border-accent/50 hover:text-text'
+                }`}
+              >
+                <Icon size={17} className="mb-2" />
+                <div className="text-sm font-semibold">{meta.label}</div>
+                <div className="mt-0.5 text-[11px] opacity-80">{meta.hint}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div
         onClick={() => fileInputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault();
+        onDragOver={(event) => {
+          event.preventDefault();
           setDragOver(true);
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
-        className={`cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-colors ${
-          dragOver ? 'border-accent bg-accent/10' : 'border-border'
+        className={`cursor-pointer rounded-2xl border-2 border-dashed p-6 text-center transition-colors sm:p-10 ${
+          dragOver ? 'border-accent bg-accent/10' : 'border-border bg-bg-card'
         }`}
       >
         <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" multiple hidden onChange={onFileInputChange} />
-        <div className="mb-2 text-3xl text-accent">⇪</div>
-        <p>
-          <strong>Перетягніть файли сюди</strong> або <span className="text-accent underline">оберіть файли</span>
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+          <UploadCloud size={24} />
+        </div>
+        <p className="text-base font-semibold text-text">Обрати файл з телефона</p>
+        <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-text-muted">
+          Підтримуються `.csv`, `.xlsx`, `.xls`. Можна вибрати кілька файлів одразу.
         </p>
-        <p className="text-xs text-text-muted">Підтримуються .csv, .xlsx, .xls</p>
+        <button className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-accent-strong px-5 py-3 text-sm font-semibold text-[#06281c]">
+          <Plus size={16} />
+          Вибрати файл
+        </button>
       </div>
 
-      <div className="mt-4.5 flex flex-col gap-2.5">
-        {queue.map((item) => (
-          <div key={item.id} className="flex items-center justify-between rounded-[10px] border border-border bg-bg-card px-3.5 py-3 text-[13.5px]">
-            <span>{item.fileName}</span>
-            <span className={item.status === 'ok' ? 'text-accent-strong' : item.status === 'error' ? 'text-danger' : ''}>
-              {item.status === 'ok' && (item.note || 'Імпортовано')}
-              {item.status === 'error' && (item.note || 'Помилка')}
-              {item.status === 'pending' && 'Читання файлу...'}
-              {item.status === 'awaiting-review' && 'Очікує перевірки полів...'}
-            </span>
+      <div className="my-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <button
+          onClick={loadDemoData}
+          disabled={seedingDemo}
+          className="rounded-2xl border border-accent/30 bg-accent/10 p-4 text-left transition-colors hover:border-accent/60 disabled:opacity-60"
+        >
+          <Sparkles size={18} className="mb-2 text-accent" />
+          <div className="text-sm font-semibold text-text">{seedingDemo ? 'Додаю приклад...' : 'Немає файлу? Додати демо-дані'}</div>
+          <div className="mt-1 text-xs text-text-muted">Створить 14 днів прикладів для дашборду та трендів.</div>
+        </button>
+        <a href="/api/backup" className="rounded-2xl border border-border bg-bg-card p-4 transition-colors hover:border-accent/50">
+          <Database size={18} className="mb-2 text-info" />
+          <div className="text-sm font-semibold text-text">Спершу зробити backup</div>
+          <div className="mt-1 text-xs text-text-muted">Завантажити JSON-копію перед великим імпортом.</div>
+        </a>
+      </div>
+
+      {queue.length > 0 && (
+        <div className="mt-4.5 rounded-2xl border border-border bg-bg-card p-4">
+          <h2 className="mb-3 text-[15px] font-semibold text-text">Файли</h2>
+          <div className="flex flex-col gap-2.5">
+            {queue.map((item) => (
+              <div key={item.id} className="rounded-xl border border-border bg-bg-elevated p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-text">{item.fileName}</div>
+                    <div className={`mt-1 text-xs ${item.status === 'ok' ? 'text-accent-strong' : item.status === 'error' ? 'text-danger' : 'text-text-muted'}`}>
+                      {item.status === 'ok' && (item.note || 'Імпортовано')}
+                      {item.status === 'error' && (item.note || 'Помилка')}
+                      {item.status === 'pending' && 'Читаю файл...'}
+                      {item.status === 'awaiting-review' && `Потрібна перевірка: ${TYPE_META[item.guessedType || preferredType].label}`}
+                    </div>
+                  </div>
+                  {item.status === 'awaiting-review' && (
+                    <button onClick={() => openReview(item, item.guessedType || preferredType)} className="shrink-0 rounded-lg bg-accent-strong px-3 py-2 text-xs font-semibold text-[#06281c]">
+                      Перевірити
+                    </button>
+                  )}
+                  {item.status === 'ok' && <CheckCircle2 size={18} className="shrink-0 text-accent-strong" />}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-
-      <div className="my-5 text-center text-xs text-text-muted">або</div>
-      <button
-        onClick={loadSampleData}
-        className="rounded-lg border border-border bg-bg-card px-4 py-2 text-[13.5px] hover:border-accent"
-      >
-        Завантажити приклад даних для тесту
-      </button>
+        </div>
+      )}
 
       {modalItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55">
-          <div className="max-h-[86vh] w-[520px] max-w-[92vw] overflow-y-auto rounded-2xl border border-border bg-bg-elevated p-6">
-            <h2 className="mt-0 text-lg">Перевірте відповідність полів</h2>
-            <p className="text-xs text-text-muted">
-              Файл: {modalItem.fileName} · {modalItem.rows?.length ?? 0} рядків · {modalItem.headers?.length ?? 0} колонок
-            </p>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4">
+          <div className="max-h-[94vh] w-full overflow-y-auto rounded-t-2xl border border-border bg-bg-elevated p-4 shadow-2xl sm:w-[620px] sm:rounded-2xl sm:p-6">
+            <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex items-start justify-between gap-3 border-b border-border bg-bg-elevated px-4 py-4 sm:-mx-6 sm:-mt-6 sm:px-6">
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold text-text">Перевірка файлу</h2>
+                <p className="truncate text-xs text-text-muted">{modalItem.fileName}</p>
+              </div>
+              <button onClick={cancelModal} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border">
+                <X size={16} />
+              </button>
+            </div>
 
-            <label className="mt-3.5 flex flex-col gap-1.5 text-xs text-text-muted">
+            <div className="mb-4 grid grid-cols-3 gap-2 text-center">
+              <MiniStat label="Рядків" value={String(fileSummary?.rows ?? 0)} />
+              <MiniStat label="Колонок" value={String(fileSummary?.headers ?? 0)} />
+              <MiniStat label="Знайдено" value={`${fileSummary?.mapped ?? 0}/${fileSummary?.total ?? 0}`} />
+            </div>
+
+            <label className="flex flex-col gap-1.5 text-xs text-text-muted">
               Тип даних
-              <select
-                value={mapType}
-                onChange={(e) => changeMapType(e.target.value as EntryType)}
-                className="rounded-lg border border-border bg-bg-card px-2.5 py-2 text-[13.5px] text-text"
-              >
-                <option value="sleep">Сон</option>
-                <option value="workouts">Тренування</option>
-                <option value="nutrition">Харчування</option>
-                <option value="weight">Вага</option>
-                <option value="mood">Настрій</option>
+              <select value={mapType} onChange={(event) => changeMapType(event.target.value as EntryType)} className="rounded-xl border border-border bg-bg-card px-3 py-3 text-sm text-text">
+                {TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {TYPE_META[type].label}
+                  </option>
+                ))}
               </select>
             </label>
 
-            <div className="mt-3 flex flex-col gap-2.5">
-              {Object.keys(FIELD_ALIASES[mapType]).map((field) => (
-                <label key={field} className="flex items-center justify-between gap-2.5 text-[13px] text-text-muted">
-                  {FIELD_LABELS[field] || field}
-                  <select
-                    value={mapping[field] || ''}
-                    onChange={(e) => setMapping((m) => ({ ...m, [field]: e.target.value }))}
-                    className="min-w-[180px] rounded-lg border border-border bg-bg-card px-2 py-1.5 text-text"
-                  >
-                    <option value="">— не використовувати —</option>
-                    {(modalItem.headers || []).map((h) => (
-                      <option key={h} value={h}>
-                        {h}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ))}
+            <div className="mt-4 rounded-2xl border border-border bg-bg-card p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-text">Головні поля</div>
+                  <div className="text-xs text-text-muted">Перевірте тільки найважливіше для імпорту.</div>
+                </div>
+                <span className="rounded-full bg-accent/10 px-2 py-1 text-[11px] text-accent">
+                  {mappedRequired}/{requiredFields.length}
+                </span>
+              </div>
+              <div className="flex flex-col gap-3">
+                {requiredFields.map((field) => (
+                  <FieldSelect key={field} field={field} headers={modalItem.headers || []} mapping={mapping} onChange={setMapping} required />
+                ))}
+              </div>
             </div>
 
-            <div className="mt-4.5 flex justify-end gap-2">
-              <button onClick={cancelModal} className="rounded-lg border border-border bg-bg-card px-4 py-2 text-[13.5px]">
+            <button
+              onClick={() => setShowOptional((value) => !value)}
+              className="mt-3 flex w-full items-center justify-between rounded-xl border border-border bg-bg-card px-3 py-3 text-sm text-text-muted"
+            >
+              Додаткові поля
+              <ChevronDown size={16} className={showOptional ? 'rotate-180 transition-transform' : 'transition-transform'} />
+            </button>
+            {showOptional && (
+              <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-border bg-bg-card p-3">
+                {optionalFields.map((field) => (
+                  <FieldSelect key={field} field={field} headers={modalItem.headers || []} mapping={mapping} onChange={setMapping} />
+                ))}
+              </div>
+            )}
+
+            <div className="sticky bottom-0 -mx-4 mt-5 flex gap-2 border-t border-border bg-bg-elevated px-4 py-4 sm:-mx-6 sm:px-6">
+              <button onClick={cancelModal} className="flex-1 rounded-xl border border-border bg-bg-card px-4 py-3 text-sm">
                 Скасувати
               </button>
-              <button onClick={confirmModal} className="rounded-lg bg-accent-strong px-4 py-2 text-[13.5px] font-semibold text-[#06281c]">
+              <button onClick={confirmModal} disabled={!canImport} className="flex-1 rounded-xl bg-accent-strong px-4 py-3 text-sm font-semibold text-[#06281c] disabled:opacity-50">
                 Імпортувати
               </button>
             </div>
@@ -358,5 +411,58 @@ export default function ImportPage() {
         </div>
       )}
     </section>
+  );
+}
+
+function Step({ number, label, active }: { number: string; label: string; active: boolean }) {
+  return (
+    <div className={`rounded-xl border px-2 py-2 ${active ? 'border-accent/30 bg-accent/10 text-accent' : 'border-border bg-bg-card'}`}>
+      <div className="mx-auto mb-1 flex h-6 w-6 items-center justify-center rounded-full bg-bg-elevated text-xs font-bold">{number}</div>
+      {label}
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-bg-card p-3">
+      <div className="text-lg font-bold text-text">{value}</div>
+      <div className="text-[11px] text-text-muted">{label}</div>
+    </div>
+  );
+}
+
+function FieldSelect({
+  field,
+  headers,
+  mapping,
+  onChange,
+  required,
+}: {
+  field: string;
+  headers: string[];
+  mapping: FieldMapping;
+  onChange: React.Dispatch<React.SetStateAction<FieldMapping>>;
+  required?: boolean;
+}) {
+  return (
+    <label className="flex flex-col gap-1.5 text-xs text-text-muted">
+      <span className="flex items-center gap-1">
+        {FIELD_LABELS[field] || field}
+        {required && <span className="text-accent">*</span>}
+      </span>
+      <select
+        value={mapping[field] || ''}
+        onChange={(event) => onChange((current) => ({ ...current, [field]: event.target.value }))}
+        className="w-full rounded-xl border border-border bg-bg-elevated px-3 py-3 text-sm text-text"
+      >
+        <option value="">Не використовувати</option>
+        {headers.map((header) => (
+          <option key={header} value={header}>
+            {header}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
