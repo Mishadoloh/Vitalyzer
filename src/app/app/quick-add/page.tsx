@@ -2,38 +2,44 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Activity, Dumbbell, Moon, Save, Scale, Smile, Utensils, type LucideIcon } from 'lucide-react';
 import { showToast } from '@/lib/toast';
 import type { EntryType } from '@/lib/types';
 
-const TABS: { key: EntryType; label: string }[] = [
-  { key: 'sleep', label: 'Сон' },
-  { key: 'workouts', label: 'Тренування' },
-  { key: 'nutrition', label: 'Харчування' },
-  { key: 'weight', label: 'Вага' },
-  { key: 'mood', label: 'Настрій' },
+const TABS: { key: EntryType; label: string; hint: string; icon: LucideIcon }[] = [
+  { key: 'sleep', label: 'Сон', hint: 'години та якість', icon: Moon },
+  { key: 'workouts', label: 'Тренування', hint: 'тип і хвилини', icon: Dumbbell },
+  { key: 'nutrition', label: 'Харчування', hint: 'ккал і макро', icon: Utensils },
+  { key: 'weight', label: 'Вага', hint: 'контроль прогресу', icon: Scale },
+  { key: 'mood', label: 'Настрій', hint: 'енергія і стрес', icon: Smile },
 ];
 
+const inputCls = 'rounded-xl border border-border bg-bg-elevated px-3 py-3 text-sm text-text outline-none focus:border-accent';
+
 function todayISO(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
     <label className="flex flex-col gap-1.5 text-xs text-text-muted">
-      {label}
+      <span className="flex items-center justify-between gap-2">
+        {label}
+        {hint && <span className="text-[11px] opacity-75">{hint}</span>}
+      </span>
       {children}
     </label>
   );
 }
 
-const inputCls = 'rounded-lg border border-border bg-bg-card px-3 py-2 text-[13.5px] text-text';
+function Chip({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-text-muted hover:border-accent hover:text-accent">
+      {children}
+    </button>
+  );
+}
 
 export default function QuickAddPage() {
   const [tab, setTab] = useState<EntryType>('sleep');
@@ -41,14 +47,16 @@ export default function QuickAddPage() {
   const [saving, setSaving] = useState(false);
   const router = useRouter();
 
-  const [sleep, setSleep] = useState({ hours: 7.5, quality: 3, bedtime: '', wakeTime: '' });
+  const [sleep, setSleep] = useState({ hours: 7.5, quality: 4, bedtime: '', wakeTime: '' });
   const [workout, setWorkout] = useState({ type: 'Біг', durationMin: 30, calories: '', avgHR: '', distanceKm: '' });
   const [nutrition, setNutrition] = useState({ calories: 2000, proteinG: 100, carbsG: 220, fatG: 70, waterMl: 2000 });
   const [weight, setWeight] = useState({ weightKg: 75, bodyFatPct: '' });
   const [mood, setMood] = useState({ mood: 3, energy: 3, stress: 3, notes: '' });
 
+  const activeTab = TABS.find((item) => item.key === tab) || TABS[0];
+  const ActiveIcon = activeTab.icon;
+
   async function submit() {
-    let type: EntryType = tab;
     let record: Record<string, unknown>;
 
     if (tab === 'sleep') {
@@ -56,7 +64,7 @@ export default function QuickAddPage() {
     } else if (tab === 'workouts') {
       record = {
         date,
-        type: workout.type,
+        type: workout.type || 'Тренування',
         durationMin: workout.durationMin,
         calories: workout.calories === '' ? null : Number(workout.calories),
         avgHR: workout.avgHR === '' ? null : Number(workout.avgHR),
@@ -72,14 +80,14 @@ export default function QuickAddPage() {
 
     setSaving(true);
     try {
-      const res = await fetch('/api/import', {
+      const response = await fetch('/api/import', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ type, records: [record] }),
+        body: JSON.stringify({ type: tab, records: [record] }),
       });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Помилка збереження');
-      showToast(`Збережено: ${TABS.find((t) => t.key === type)?.label} за ${date}`);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Помилка збереження');
+      showToast(`Збережено: ${activeTab.label} за ${date}`);
       router.push('/app');
     } catch (e) {
       showToast('Не вдалося зберегти запис: ' + (e instanceof Error ? e.message : String(e)), true);
@@ -89,126 +97,193 @@ export default function QuickAddPage() {
   }
 
   return (
-    <section>
-      <header className="mb-4.5">
-        <h1 className="m-0 text-[22px]">Швидкий запис</h1>
+    <section className="pb-8">
+      <header className="mb-4 rounded-2xl border border-border bg-bg-card p-4">
+        <p className="mb-1 text-xs font-medium text-accent">Запис вручну</p>
+        <h1 className="m-0 text-[22px] text-text">Швидкий запис</h1>
+        <p className="mt-1 max-w-2xl text-sm leading-6 text-text-muted">
+          Додайте сьогоднішні показники без імпорту файлів. Повторний запис за ту саму дату оновить день, а тренування додасться окремим рядком.
+        </p>
       </header>
-      <p className="text-text-muted">
-        Додайте сьогоднішні (або будь-якої іншої дати) показники вручну — без підготовки CSV-файлу. Повторне
-        збереження за ту саму дату оновлює запис (для тренувань — додає ще одне).
-      </p>
 
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`rounded-lg border px-3.5 py-2 text-[13px] ${
-              tab === t.key ? 'border-accent text-accent' : 'border-border text-text-muted'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-5">
+        {TABS.map((item) => {
+          const Icon = item.icon;
+          const active = tab === item.key;
+          return (
+            <button
+              key={item.key}
+              onClick={() => setTab(item.key)}
+              className={`rounded-2xl border p-3 text-left transition-colors ${
+                active ? 'border-accent bg-accent/10 text-accent' : 'border-border bg-bg-card text-text-muted hover:border-accent/50 hover:text-text'
+              }`}
+            >
+              <Icon size={17} className="mb-2" />
+              <div className="text-sm font-semibold">{item.label}</div>
+              <div className="mt-0.5 text-[11px] opacity-80">{item.hint}</div>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="mt-4 max-w-md rounded-2xl border border-border bg-bg-card p-5">
-        <Field label="Дата">
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
-        </Field>
-
-        {tab === 'sleep' && (
-          <div className="mt-3.5 flex flex-col gap-3">
-            <Field label="Години сну">
-              <input type="number" step="0.1" value={sleep.hours} onChange={(e) => setSleep({ ...sleep, hours: Number(e.target.value) })} className={inputCls} />
-            </Field>
-            <Field label="Якість сну (1-5)">
-              <input type="number" min={1} max={5} step="0.5" value={sleep.quality} onChange={(e) => setSleep({ ...sleep, quality: Number(e.target.value) })} className={inputCls} />
-            </Field>
-            <Field label="Час відходу до сну">
-              <input type="time" value={sleep.bedtime} onChange={(e) => setSleep({ ...sleep, bedtime: e.target.value })} className={inputCls} />
-            </Field>
-            <Field label="Час пробудження">
-              <input type="time" value={sleep.wakeTime} onChange={(e) => setSleep({ ...sleep, wakeTime: e.target.value })} className={inputCls} />
-            </Field>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,680px)_1fr]">
+        <div className="rounded-2xl border border-border bg-bg-card p-4 sm:p-5">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
+              <ActiveIcon size={18} />
+            </div>
+            <div>
+              <h2 className="text-[15px] font-semibold text-text">{activeTab.label}</h2>
+              <p className="text-xs text-text-muted">Запис за {date}</p>
+            </div>
           </div>
-        )}
 
-        {tab === 'workouts' && (
-          <div className="mt-3.5 flex flex-col gap-3">
-            <Field label="Тип тренування">
-              <input type="text" value={workout.type} onChange={(e) => setWorkout({ ...workout, type: e.target.value })} className={inputCls} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Дата">
+              <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className={inputCls} />
             </Field>
-            <Field label="Тривалість, хв">
-              <input type="number" value={workout.durationMin} onChange={(e) => setWorkout({ ...workout, durationMin: Number(e.target.value) })} className={inputCls} />
-            </Field>
-            <Field label="Калорії (опційно)">
-              <input type="number" value={workout.calories} onChange={(e) => setWorkout({ ...workout, calories: e.target.value })} className={inputCls} />
-            </Field>
-            <Field label="Середній пульс (опційно)">
-              <input type="number" value={workout.avgHR} onChange={(e) => setWorkout({ ...workout, avgHR: e.target.value })} className={inputCls} />
-            </Field>
-            <Field label="Дистанція, км (опційно)">
-              <input type="number" step="0.1" value={workout.distanceKm} onChange={(e) => setWorkout({ ...workout, distanceKm: e.target.value })} className={inputCls} />
-            </Field>
+
+            {tab === 'sleep' && (
+              <>
+                <Field label="Години сну">
+                  <input type="number" step="0.1" value={sleep.hours} onChange={(event) => setSleep({ ...sleep, hours: Number(event.target.value) })} className={inputCls} />
+                </Field>
+                <Field label="Якість сну" hint={`${sleep.quality}/5`}>
+                  <input type="range" min={1} max={5} step={0.5} value={sleep.quality} onChange={(event) => setSleep({ ...sleep, quality: Number(event.target.value) })} />
+                </Field>
+                <Field label="Час сну">
+                  <input type="time" value={sleep.bedtime} onChange={(event) => setSleep({ ...sleep, bedtime: event.target.value })} className={inputCls} />
+                </Field>
+                <Field label="Пробудження">
+                  <input type="time" value={sleep.wakeTime} onChange={(event) => setSleep({ ...sleep, wakeTime: event.target.value })} className={inputCls} />
+                </Field>
+              </>
+            )}
+
+            {tab === 'workouts' && (
+              <>
+                <Field label="Тип тренування">
+                  <input type="text" value={workout.type} onChange={(event) => setWorkout({ ...workout, type: event.target.value })} className={inputCls} />
+                </Field>
+                <Field label="Тривалість, хв">
+                  <input type="number" value={workout.durationMin} onChange={(event) => setWorkout({ ...workout, durationMin: Number(event.target.value) })} className={inputCls} />
+                </Field>
+                <Field label="Калорії" hint="опційно">
+                  <input type="number" value={workout.calories} onChange={(event) => setWorkout({ ...workout, calories: event.target.value })} className={inputCls} />
+                </Field>
+                <Field label="Середній пульс" hint="опційно">
+                  <input type="number" value={workout.avgHR} onChange={(event) => setWorkout({ ...workout, avgHR: event.target.value })} className={inputCls} />
+                </Field>
+                <Field label="Дистанція, км" hint="опційно">
+                  <input type="number" step="0.1" value={workout.distanceKm} onChange={(event) => setWorkout({ ...workout, distanceKm: event.target.value })} className={inputCls} />
+                </Field>
+              </>
+            )}
+
+            {tab === 'nutrition' && (
+              <>
+                <Field label="Калорії">
+                  <input type="number" value={nutrition.calories} onChange={(event) => setNutrition({ ...nutrition, calories: Number(event.target.value) })} className={inputCls} />
+                </Field>
+                <Field label="Білок, г">
+                  <input type="number" value={nutrition.proteinG} onChange={(event) => setNutrition({ ...nutrition, proteinG: Number(event.target.value) })} className={inputCls} />
+                </Field>
+                <Field label="Вуглеводи, г">
+                  <input type="number" value={nutrition.carbsG} onChange={(event) => setNutrition({ ...nutrition, carbsG: Number(event.target.value) })} className={inputCls} />
+                </Field>
+                <Field label="Жири, г">
+                  <input type="number" value={nutrition.fatG} onChange={(event) => setNutrition({ ...nutrition, fatG: Number(event.target.value) })} className={inputCls} />
+                </Field>
+                <Field label="Вода, мл">
+                  <input type="number" value={nutrition.waterMl} onChange={(event) => setNutrition({ ...nutrition, waterMl: Number(event.target.value) })} className={inputCls} />
+                </Field>
+              </>
+            )}
+
+            {tab === 'weight' && (
+              <>
+                <Field label="Вага, кг">
+                  <input type="number" step="0.1" value={weight.weightKg} onChange={(event) => setWeight({ ...weight, weightKg: Number(event.target.value) })} className={inputCls} />
+                </Field>
+                <Field label="% жиру" hint="опційно">
+                  <input type="number" step="0.1" value={weight.bodyFatPct} onChange={(event) => setWeight({ ...weight, bodyFatPct: event.target.value })} className={inputCls} />
+                </Field>
+              </>
+            )}
+
+            {tab === 'mood' && (
+              <>
+                <Field label="Настрій" hint={`${mood.mood}/5`}>
+                  <input type="range" min={1} max={5} value={mood.mood} onChange={(event) => setMood({ ...mood, mood: Number(event.target.value) })} />
+                </Field>
+                <Field label="Енергія" hint={`${mood.energy}/5`}>
+                  <input type="range" min={1} max={5} value={mood.energy} onChange={(event) => setMood({ ...mood, energy: Number(event.target.value) })} />
+                </Field>
+                <Field label="Стрес" hint={`${mood.stress}/5`}>
+                  <input type="range" min={1} max={5} value={mood.stress} onChange={(event) => setMood({ ...mood, stress: Number(event.target.value) })} />
+                </Field>
+                <Field label="Нотатки" hint="опційно">
+                  <input type="text" value={mood.notes} onChange={(event) => setMood({ ...mood, notes: event.target.value })} className={inputCls} />
+                </Field>
+              </>
+            )}
           </div>
-        )}
 
-        {tab === 'nutrition' && (
-          <div className="mt-3.5 flex flex-col gap-3">
-            <Field label="Калорії">
-              <input type="number" value={nutrition.calories} onChange={(e) => setNutrition({ ...nutrition, calories: Number(e.target.value) })} className={inputCls} />
-            </Field>
-            <Field label="Білки, г">
-              <input type="number" value={nutrition.proteinG} onChange={(e) => setNutrition({ ...nutrition, proteinG: Number(e.target.value) })} className={inputCls} />
-            </Field>
-            <Field label="Вуглеводи, г">
-              <input type="number" value={nutrition.carbsG} onChange={(e) => setNutrition({ ...nutrition, carbsG: Number(e.target.value) })} className={inputCls} />
-            </Field>
-            <Field label="Жири, г">
-              <input type="number" value={nutrition.fatG} onChange={(e) => setNutrition({ ...nutrition, fatG: Number(e.target.value) })} className={inputCls} />
-            </Field>
-            <Field label="Вода, мл">
-              <input type="number" value={nutrition.waterMl} onChange={(e) => setNutrition({ ...nutrition, waterMl: Number(e.target.value) })} className={inputCls} />
-            </Field>
+          <button
+            onClick={submit}
+            disabled={saving}
+            className="mt-5 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-accent-strong px-4 py-3 text-sm font-semibold text-[#06281c] disabled:opacity-50"
+          >
+            <Save size={16} />
+            {saving ? 'Збереження...' : 'Зберегти запис'}
+          </button>
+        </div>
+
+        <aside className="rounded-2xl border border-border bg-bg-card p-4">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-text">
+            <Activity size={15} className="text-accent" />
+            Швидкі пресети
           </div>
-        )}
-
-        {tab === 'weight' && (
-          <div className="mt-3.5 flex flex-col gap-3">
-            <Field label="Вага, кг">
-              <input type="number" step="0.1" value={weight.weightKg} onChange={(e) => setWeight({ ...weight, weightKg: Number(e.target.value) })} className={inputCls} />
-            </Field>
-            <Field label="% жиру в тілі (опційно)">
-              <input type="number" step="0.1" value={weight.bodyFatPct} onChange={(e) => setWeight({ ...weight, bodyFatPct: e.target.value })} className={inputCls} />
-            </Field>
+          <div className="flex flex-wrap gap-2">
+            {tab === 'sleep' && (
+              <>
+                <Chip onClick={() => setSleep({ ...sleep, hours: 7.5, quality: 4 })}>нормальний сон</Chip>
+                <Chip onClick={() => setSleep({ ...sleep, hours: 6, quality: 2.5 })}>мало сну</Chip>
+                <Chip onClick={() => setSleep({ ...sleep, hours: 8.5, quality: 5 })}>супер сон</Chip>
+              </>
+            )}
+            {tab === 'workouts' && (
+              <>
+                <Chip onClick={() => setWorkout({ ...workout, type: 'Біг', durationMin: 35 })}>біг 35 хв</Chip>
+                <Chip onClick={() => setWorkout({ ...workout, type: 'Силове', durationMin: 50 })}>силове 50 хв</Chip>
+                <Chip onClick={() => setWorkout({ ...workout, type: 'Ходьба', durationMin: 45 })}>ходьба</Chip>
+              </>
+            )}
+            {tab === 'nutrition' && (
+              <>
+                <Chip onClick={() => setNutrition({ ...nutrition, calories: 1800, proteinG: 120 })}>дефіцит</Chip>
+                <Chip onClick={() => setNutrition({ ...nutrition, calories: 2200, proteinG: 130 })}>баланс</Chip>
+                <Chip onClick={() => setNutrition({ ...nutrition, calories: 2600, proteinG: 150 })}>набір</Chip>
+              </>
+            )}
+            {tab === 'weight' && (
+              <>
+                <Chip onClick={() => setWeight({ ...weight, weightKg: Math.round((weight.weightKg - 0.1) * 10) / 10 })}>-0.1 кг</Chip>
+                <Chip onClick={() => setWeight({ ...weight, weightKg: Math.round((weight.weightKg + 0.1) * 10) / 10 })}>+0.1 кг</Chip>
+              </>
+            )}
+            {tab === 'mood' && (
+              <>
+                <Chip onClick={() => setMood({ ...mood, mood: 4, energy: 4, stress: 2 })}>добрий день</Chip>
+                <Chip onClick={() => setMood({ ...mood, mood: 3, energy: 3, stress: 3 })}>звичайний</Chip>
+                <Chip onClick={() => setMood({ ...mood, mood: 2, energy: 2, stress: 4 })}>важкий день</Chip>
+              </>
+            )}
           </div>
-        )}
-
-        {tab === 'mood' && (
-          <div className="mt-3.5 flex flex-col gap-3">
-            <Field label={`Настрій: ${mood.mood}/5`}>
-              <input type="range" min={1} max={5} value={mood.mood} onChange={(e) => setMood({ ...mood, mood: Number(e.target.value) })} />
-            </Field>
-            <Field label={`Енергія: ${mood.energy}/5`}>
-              <input type="range" min={1} max={5} value={mood.energy} onChange={(e) => setMood({ ...mood, energy: Number(e.target.value) })} />
-            </Field>
-            <Field label={`Стрес: ${mood.stress}/5`}>
-              <input type="range" min={1} max={5} value={mood.stress} onChange={(e) => setMood({ ...mood, stress: Number(e.target.value) })} />
-            </Field>
-            <Field label="Нотатки (опційно)">
-              <input type="text" value={mood.notes} onChange={(e) => setMood({ ...mood, notes: e.target.value })} className={inputCls} />
-            </Field>
-          </div>
-        )}
-
-        <button
-          onClick={submit}
-          disabled={saving}
-          className="mt-5 w-full rounded-lg bg-accent-strong px-4 py-2.5 text-[13.5px] font-semibold text-[#06281c] disabled:opacity-50"
-        >
-          {saving ? 'Збереження...' : 'Зберегти запис'}
-        </button>
+          <p className="mt-4 text-xs leading-5 text-text-muted">
+            Пресети лише заповнюють поля. Перед збереженням можна змінити будь-яке значення вручну.
+          </p>
+        </aside>
       </div>
     </section>
   );
