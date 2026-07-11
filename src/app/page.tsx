@@ -167,7 +167,7 @@ export default async function LandingPage() {
       </header>
 
       <section className="relative mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 px-5 py-14 sm:py-20 lg:grid-cols-[1.1fr_0.9fr]">
-        <Hero3DLoader className="pointer-events-none absolute inset-x-0 -top-10 bottom-0 opacity-60 lg:-right-24 lg:left-auto lg:w-[55%] lg:opacity-80" />
+        <Hero3DLoader className="pointer-events-none absolute inset-x-0 -top-6 bottom-0 opacity-45 [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_72%,transparent)] lg:-right-24 lg:left-auto lg:w-[58%] lg:opacity-85" />
         <div className="relative text-center lg:text-left">
           <span className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-border bg-bg-card px-3 py-1 text-[12px] text-text-muted">
             <Sparkles size={13} className="text-accent" />
@@ -342,14 +342,14 @@ export default async function LandingPage() {
 
       <section className="relative px-5 py-12 sm:py-14">
         <Reveal>
-          <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-6 overflow-hidden border-y border-border/70 py-8 text-center sm:grid-cols-[minmax(0,1fr)_300px_auto] sm:text-left">
+          <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-7 overflow-hidden border-y border-border/70 py-9 text-center sm:grid-cols-[minmax(0,1fr)_390px_auto] sm:text-left">
             <div>
               <h2 className="m-0 text-xl font-semibold sm:text-2xl">Перевірте на власних даних за кілька хвилин</h2>
               <p className="mt-2 max-w-xl text-[14px] text-text-muted">
                 Відкрийте гостьовий режим, внесіть перший запис або імпортуйте файл і подивіться, яку пораду дасть рушій.
               </p>
             </div>
-            <CtaData3DLoader className="pointer-events-none mx-auto h-[160px] w-full max-w-[330px] opacity-95 sm:h-[170px] sm:max-w-none" />
+            <CtaData3DLoader className="pointer-events-none mx-auto -my-3 h-[260px] w-full max-w-[420px] opacity-100 sm:h-[220px] sm:max-w-none" />
             <GuestSignInButton
               callbackUrl="/app"
               className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent-strong px-6 py-3 text-[15px] font-semibold text-[#06281c] hover:opacity-90 sm:w-auto"

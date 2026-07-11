@@ -40,15 +40,15 @@ export default function Sidebar() {
     async function load() {
       try {
         const [sleep, workouts, nutrition] = await Promise.all([
-          fetch('/api/sleep').then((r) => r.json()),
-          fetch('/api/workouts').then((r) => r.json()),
-          fetch('/api/nutrition').then((r) => r.json()),
+          fetch('/api/sleep').then((response) => response.json()),
+          fetch('/api/workouts').then((response) => response.json()),
+          fetch('/api/nutrition').then((response) => response.json()),
         ]);
         if (!cancelled) {
           setCounts({ sleep: sleep.length, workouts: workouts.length, nutrition: nutrition.length });
         }
       } catch {
-        // silent — sidebar summary is non-critical
+        // Sidebar summary is non-critical.
       }
     }
     load();
@@ -67,7 +67,7 @@ export default function Sidebar() {
           <span>Vitalyzer</span>
         </div>
         <button
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => setOpen((value) => !value)}
           aria-label="Меню"
           className="flex h-9 w-9 items-center justify-center rounded-lg border border-border"
         >
@@ -107,15 +107,15 @@ export default function Sidebar() {
         <div className="flex flex-col gap-2 border-t border-border pt-4 text-xs text-text-muted">
           <div className="flex items-center gap-2">
             <Moon size={13} className="text-accent" />
-            <b className="text-text">{counts ? counts.sleep : '—'}</b> записів сну
+            <b className="text-text">{counts ? counts.sleep : '-'}</b> записів сну
           </div>
           <div className="flex items-center gap-2">
             <Dumbbell size={13} className="text-info" />
-            <b className="text-text">{counts ? counts.workouts : '—'}</b> тренувань
+            <b className="text-text">{counts ? counts.workouts : '-'}</b> тренувань
           </div>
           <div className="flex items-center gap-2">
             <Utensils size={13} className="text-warn" />
-            <b className="text-text">{counts ? counts.nutrition : '—'}</b> днів харчування
+            <b className="text-text">{counts ? counts.nutrition : '-'}</b> днів харчування
           </div>
         </div>
       </aside>

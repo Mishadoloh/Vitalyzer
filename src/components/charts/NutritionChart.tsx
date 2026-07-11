@@ -8,12 +8,14 @@ const TEXT = '#8a90a3';
 
 export default function NutritionChart({
   nutritionAll,
+  days = 14,
 }: {
   nutritionAll: { date: string; calories: number; proteinG: number }[];
+  days?: number;
 }) {
-  const days = lastNDates(14);
+  const range = lastNDates(days);
   const byDate = Object.fromEntries(nutritionAll.map((r) => [r.date, r]));
-  const data = days.map((d) => ({
+  const data = range.map((d) => ({
     label: shortLabel(d),
     calories: byDate[d] ? byDate[d].calories : null,
     protein: byDate[d] ? byDate[d].proteinG : null,
@@ -23,7 +25,7 @@ export default function NutritionChart({
     <ResponsiveContainer width="100%" height={220}>
       <ComposedChart data={data}>
         <CartesianGrid stroke={GRID} vertical={false} />
-        <XAxis dataKey="label" tick={{ fill: TEXT, fontSize: 10 }} axisLine={{ stroke: GRID }} tickLine={false} />
+        <XAxis dataKey="label" tick={{ fill: TEXT, fontSize: 10 }} axisLine={{ stroke: GRID }} tickLine={false} interval={Math.floor(days / 8)} />
         <YAxis yAxisId="left" tick={{ fill: TEXT, fontSize: 10 }} axisLine={{ stroke: GRID }} tickLine={false} />
         <YAxis yAxisId="right" orientation="right" tick={{ fill: TEXT, fontSize: 10 }} axisLine={false} tickLine={false} />
         <Tooltip contentStyle={{ background: '#161922', border: '1px solid #2a2f3d', borderRadius: 8, fontSize: 12 }} />

@@ -17,7 +17,7 @@ function ParticleSphere() {
   const target = useRef({ x: 0, y: 0 });
 
   const { basePositions, positions, colors, phases } = useMemo(() => {
-    const count = 1800;
+    const count = 1250;
     const basePositions = new Float32Array(count * 3);
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
@@ -35,9 +35,9 @@ function ParticleSphere() {
       basePositions[i * 3] = x;
       basePositions[i * 3 + 1] = y;
       basePositions[i * 3 + 2] = z;
-      positions[i * 3] = x * 2.2;
-      positions[i * 3 + 1] = y * 2.2;
-      positions[i * 3 + 2] = z * 2.2;
+      positions[i * 3] = x * 2;
+      positions[i * 3 + 1] = y * 2;
+      positions[i * 3 + 2] = z * 2;
       phases[i] = x * 2.1 + y * 1.7 + z * 1.3;
       const c = accent.clone().lerp(info, t);
       colors[i * 3] = c.r;
@@ -63,7 +63,7 @@ function ParticleSphere() {
     const attr = p.geometry.getAttribute('position') as THREE.BufferAttribute;
     const arr = attr.array as Float32Array;
     for (let i = 0; i < phases.length; i++) {
-      const r = 2.2 + Math.sin(time * 1.1 + phases[i] * 2.4) * 0.14;
+      const r = 1.98 + Math.sin(time * 1.1 + phases[i] * 2.4) * 0.13;
       arr[i * 3] = basePositions[i * 3] * r;
       arr[i * 3 + 1] = basePositions[i * 3 + 1] * r;
       arr[i * 3 + 2] = basePositions[i * 3 + 2] * r;
@@ -77,7 +77,7 @@ function ParticleSphere() {
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
         <bufferAttribute attach="attributes-color" args={[colors, 3]} />
       </bufferGeometry>
-      <pointsMaterial size={0.028} vertexColors transparent opacity={0.85} sizeAttenuation depthWrite={false} />
+      <pointsMaterial size={0.021} vertexColors transparent opacity={0.56} sizeAttenuation depthWrite={false} blending={THREE.AdditiveBlending} />
     </points>
   );
 }
@@ -114,6 +114,66 @@ function OrbitRing() {
       </bufferGeometry>
       <pointsMaterial size={0.022} color="#60a5fa" transparent opacity={0.55} sizeAttenuation depthWrite={false} />
     </points>
+  );
+}
+
+function FlowingSignalStreams() {
+  const group = useRef<THREE.Group>(null);
+
+  const streams = useMemo(() => {
+    return [
+      { color: '#6ee7b7', phase: 0, tilt: 0.12, speed: 1.08 },
+      { color: '#60a5fa', phase: 1.4, tilt: -0.34, speed: 0.86 },
+      { color: '#d1fae5', phase: 2.6, tilt: 0.52, speed: 0.72 },
+      { color: '#fbbf24', phase: 3.7, tilt: -0.08, speed: 0.64 },
+    ].map((stream) => {
+      const segments = 132;
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(segments * 3), 3));
+      const material = new THREE.LineBasicMaterial({
+        color: stream.color,
+        transparent: true,
+        opacity: 0.34,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      return { ...stream, segments, line: new THREE.Line(geometry, material) };
+    });
+  }, []);
+
+  useFrame(({ clock }, delta) => {
+    const g = group.current;
+    if (!g) return;
+    const elapsed = clock.elapsedTime;
+    g.rotation.y += delta * 0.08;
+    g.rotation.x = Math.sin(elapsed * 0.22) * 0.14;
+
+    g.children.forEach((child, index) => {
+      const stream = streams[index];
+      const line = child as THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
+      const attr = line.geometry.getAttribute('position') as THREE.BufferAttribute;
+
+      for (let i = 0; i < stream.segments; i++) {
+        const t = i / (stream.segments - 1);
+        const angle = t * Math.PI * 2 + elapsed * stream.speed + stream.phase;
+        const radius = 2.32 + Math.sin(t * Math.PI * 6 + elapsed) * 0.12;
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(t * Math.PI * 2 + stream.phase) * 0.58 + Math.sin(angle * 1.8) * 0.18;
+        const z = Math.sin(angle) * (0.58 + index * 0.14);
+        attr.setXYZ(i, x, y + stream.tilt, z);
+      }
+
+      attr.needsUpdate = true;
+      line.material.opacity = 0.22 + Math.max(0, Math.sin(elapsed * 1.3 + stream.phase)) * 0.32;
+    });
+  });
+
+  return (
+    <group ref={group}>
+      {streams.map(({ line }, index) => (
+        <primitive key={index} object={line} />
+      ))}
+    </group>
   );
 }
 
@@ -186,7 +246,7 @@ function SignalLattice() {
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
         <bufferAttribute attach="attributes-color" args={[colors, 3]} />
       </bufferGeometry>
-      <lineBasicMaterial vertexColors transparent opacity={0.34} blending={THREE.AdditiveBlending} depthWrite={false} />
+      <lineBasicMaterial vertexColors transparent opacity={0.22} blending={THREE.AdditiveBlending} depthWrite={false} />
     </lineSegments>
   );
 }
@@ -212,8 +272,8 @@ function PulseRings() {
     <group ref={group} rotation={[Math.PI / 2.35, 0.18, -0.28]}>
       {[0, 1, 2].map((i) => (
         <mesh key={i}>
-          <torusGeometry args={[0.72, 0.006, 8, 150]} />
-          <meshBasicMaterial color={i === 1 ? '#60a5fa' : '#34d399'} transparent opacity={0.2} blending={THREE.AdditiveBlending} depthWrite={false} />
+          <torusGeometry args={[0.82, 0.007, 8, 150]} />
+          <meshBasicMaterial color={i === 1 ? '#60a5fa' : '#34d399'} transparent opacity={0.24} blending={THREE.AdditiveBlending} depthWrite={false} />
         </mesh>
       ))}
     </group>
@@ -356,6 +416,7 @@ export default function Hero3D({ className }: { className?: string }) {
         resize={{ polyfill: HybridResizeObserver as unknown as typeof ResizeObserver }}
       >
         <ParticleSphere />
+        <FlowingSignalStreams />
         <SignalLattice />
         <OrbitRing />
         <PulseRings />

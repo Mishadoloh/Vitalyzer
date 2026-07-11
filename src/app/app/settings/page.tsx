@@ -1,8 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
-import { TriangleAlert } from 'lucide-react';
+import {
+  CheckCircle2,
+  CreditCard,
+  Database,
+  Download,
+  KeyRound,
+  LogOut,
+  RotateCcw,
+  Save,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  Trash2,
+  TriangleAlert,
+  UserRound,
+  Wand2,
+  type LucideIcon,
+} from 'lucide-react';
 import { showToast } from '@/lib/toast';
 import type { Settings } from '@/lib/types';
 
@@ -15,54 +32,137 @@ const DEFAULTS: Settings = {
   workoutsTarget: 4,
 };
 
+const GOAL_LABELS: Record<Settings['goal'], string> = {
+  lose: 'Схуднення',
+  maintain: 'Підтримка форми',
+  gain: 'Набір маси',
+  perform: 'Спортивний результат',
+};
+
+const EXPORTS = [
+  ['sleep', 'Сон'],
+  ['workouts', 'Тренування'],
+  ['nutrition', 'Харчування'],
+  ['weight', 'Вага'],
+  ['mood', 'Настрій'],
+] as const;
+
+function applyGoalPreset(settings: Settings, goal: Settings['goal']): Settings {
+  const weight = settings.weightKg || DEFAULTS.weightKg;
+  const baseCalories = Math.round(weight * 32);
+  const presets: Record<Settings['goal'], Partial<Settings>> = {
+    lose: {
+      goal,
+      calTarget: Math.max(1200, Math.round(baseCalories * 0.84)),
+      proteinTarget: 2,
+      workoutsTarget: 4,
+      sleepTarget: Math.max(7.5, settings.sleepTarget),
+    },
+    maintain: {
+      goal,
+      calTarget: baseCalories,
+      proteinTarget: 1.7,
+      workoutsTarget: 3,
+    },
+    gain: {
+      goal,
+      calTarget: Math.round(baseCalories * 1.12),
+      proteinTarget: 1.9,
+      workoutsTarget: 4,
+    },
+    perform: {
+      goal,
+      calTarget: Math.round(baseCalories * 1.08),
+      proteinTarget: 1.8,
+      workoutsTarget: 5,
+      sleepTarget: Math.max(8, settings.sleepTarget),
+    },
+  };
+  return { ...settings, ...presets[goal] };
+}
+
 export default function SettingsPage() {
   const { data: session } = useSession();
   const isGuest = Boolean((session?.user as { isGuest?: boolean } | undefined)?.isGuest);
+  const userEmail = session?.user?.email || 'Гостьовий акаунт';
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [seedingDemo, setSeedingDemo] = useState(false);
 
   useEffect(() => {
     fetch('/api/settings')
-      .then((r) => r.json())
-      .then((s) => setSettings(s))
+      .then((response) => response.json())
+      .then((nextSettings) => setSettings(nextSettings))
       .catch(() => showToast('Не вдалося завантажити налаштування', true))
       .finally(() => setLoading(false));
   }, []);
 
-  async function saveSettings() {
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(settings),
-    });
-    const updated = await res.json();
-    setSettings(updated);
-    showToast('Налаштування збережено');
+  const dailyProtein = useMemo(() => Math.round((settings.weightKg || 0) * (settings.proteinTarget || 0)), [settings.proteinTarget, settings.weightKg]);
+  const weeklyWorkoutMinutes = Math.round((settings.workoutsTarget || 0) * 45);
+  const targetSummary = [
+    { label: 'Вага', value: `${settings.weightKg || '-'} кг` },
+    { label: 'Сон', value: `${settings.sleepTarget || '-'} год` },
+    { label: 'Калорії', value: `${settings.calTarget || '-'} ккал` },
+    { label: 'Білок', value: `${dailyProtein || '-'} г/день` },
+  ];
+
+  async function saveSettings(nextSettings = settings) {
+    setSaving(true);
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(nextSettings),
+      });
+      const updated = await response.json();
+      if (!response.ok) throw new Error(updated.error || 'Не вдалося зберегти налаштування');
+      setSettings(updated);
+      showToast('Налаштування збережено');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e), true);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function saveApiKey() {
-    const res = await fetch('/api/settings/api-key', {
+    const response = await fetch('/api/settings/api-key', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ apiKey: apiKeyInput }),
     });
-    const updated = await res.json();
+    const updated = await response.json();
     setSettings(updated);
     setApiKeyInput('');
     showToast(updated.hasApiKey ? 'Ключ збережено. AI-аналіз увімкнено.' : 'Ключ порожній.');
   }
 
   async function clearApiKey() {
-    const res = await fetch('/api/settings/api-key', { method: 'DELETE' });
-    const updated = await res.json();
+    const response = await fetch('/api/settings/api-key', { method: 'DELETE' });
+    const updated = await response.json();
     setSettings(updated);
     showToast('Ключ видалено. Використовується локальний аналіз.');
   }
 
+  async function seedDemoData() {
+    setSeedingDemo(true);
+    try {
+      const response = await fetch('/api/demo-data', { method: 'POST' });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Не вдалося додати демо-дані');
+      showToast(result.message || 'Демо-дані додано');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e), true);
+    } finally {
+      setSeedingDemo(false);
+    }
+  }
+
   async function wipeAll() {
-    if (!confirm('Видалити ВСІ дані застосунку (сон, тренування, харчування, налаштування)? Дію не можна скасувати.')) return;
+    if (!confirm('Видалити всі дані застосунку: сон, тренування, харчування, вагу, настрій і налаштування? Дію не можна скасувати.')) return;
     await fetch('/api/wipe', { method: 'POST' });
     setSettings(DEFAULTS);
     showToast('Усі дані видалено');
@@ -71,9 +171,9 @@ export default function SettingsPage() {
   async function openBillingPortal() {
     setPortalLoading(true);
     try {
-      const res = await fetch('/api/stripe/portal', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Не вдалося відкрити керування підпискою');
+      const response = await fetch('/api/stripe/portal', { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Не вдалося відкрити керування підпискою');
       window.location.href = data.url;
     } catch (e) {
       showToast(e instanceof Error ? e.message : String(e), true);
@@ -94,165 +194,209 @@ export default function SettingsPage() {
 
   return (
     <section>
-      <header className="mb-4.5">
-        <h1 className="m-0 text-[22px]">Налаштування</h1>
+      <header className="mb-4.5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="m-0 text-[22px]">Налаштування</h1>
+          <p className="mt-1 max-w-2xl text-sm text-text-muted">
+            Керуйте цілями, AI-аналізом, даними та акаунтом з одного місця.
+          </p>
+        </div>
+        <button
+          onClick={() => saveSettings()}
+          disabled={saving}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-accent-strong px-4 py-2 text-[13.5px] font-semibold text-[#06281c] disabled:opacity-60"
+        >
+          <Save size={15} />
+          {saving ? 'Зберігаю...' : 'Зберегти все'}
+        </button>
       </header>
 
       {isGuest && (
         <div className="mb-4.5 flex items-start gap-2.5 rounded-2xl border border-warn/30 bg-warn/10 p-4 text-[13px] text-warn">
           <TriangleAlert size={16} className="mt-0.5 shrink-0" />
           <span>
-            Ви увійшли як гість — цей акаунт не привʼязаний до email і його не можна відновити при втраті сесії.
-            Завантажте резервну копію нижче, якщо хочете зберегти дані.
+            Ви увійшли як гість. Цей акаунт не прив'язаний до email, тому дані можуть бути втрачені після очищення сесії.
+            Перед важливими змінами завантажте резервну копію.
           </span>
         </div>
       )}
 
-      <div className="mb-4.5 rounded-2xl border border-border bg-bg-card p-5">
-        <h3 className="mb-1.5 text-[15px]">Акаунт і підписка</h3>
-        {isGuest ? (
-          <p className="text-xs text-text-muted">
-            Гостьовий акаунт не має підписки й не привʼязаний до Stripe. Для постійного акаунта вийдіть і увійдіть через Google.
-          </p>
-        ) : (
-          <>
-            <p className="text-xs text-text-muted">
-              Керуйте способом оплати, дивіться рахунки або скасуйте підписку через захищений портал Stripe.
-            </p>
-            <button
-              onClick={openBillingPortal}
-              disabled={portalLoading}
-              className="mr-2 mt-3 rounded-lg bg-accent-strong px-4 py-2 text-[13.5px] font-semibold text-[#06281c] disabled:opacity-50"
-            >
-              {portalLoading ? 'Відкриваємо...' : 'Керування підпискою'}
-            </button>
-          </>
-        )}
-        <button onClick={() => signOut({ callbackUrl: '/' })} className="mt-3 rounded-lg border border-border px-4 py-2 text-[13.5px]">
-          Вийти з акаунту
-        </button>
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {targetSummary.map((item) => (
+          <div key={item.label} className="rounded-2xl border border-border bg-bg-card p-4">
+            <div className="text-xs text-text-muted">{item.label}</div>
+            <div className="mt-1 text-xl font-bold text-text">{item.value}</div>
+          </div>
+        ))}
       </div>
 
-      <div className="mb-4.5 rounded-2xl border border-border bg-bg-card p-5">
-        <h3 className="mb-1.5 text-[15px]">Особисті цілі</h3>
-        <div className="my-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Вага, кг">
-            <input
-              type="number"
-              min={20}
-              max={300}
-              step={0.1}
-              value={settings.weightKg}
-              onChange={(e) => setSettings({ ...settings, weightKg: parseFloat(e.target.value) || 0 })}
-              className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text"
-            />
-          </Field>
-          <Field label="Ціль">
-            <select
-              value={settings.goal}
-              onChange={(e) => setSettings({ ...settings, goal: e.target.value as Settings['goal'] })}
-              className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text"
+      <SettingsSection icon={UserRound} title="Акаунт і підписка" description="Статус входу, підписка та вихід з акаунта.">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="rounded-xl border border-border bg-bg-elevated p-3">
+            <div className="text-sm font-semibold text-text">{isGuest ? 'Гостьовий режим' : userEmail}</div>
+            <div className="mt-1 text-xs text-text-muted">
+              {isGuest ? 'Можна тестувати застосунок без Google, але краще регулярно робити backup.' : 'Ваш акаунт прив’язаний до Google та може використовувати Stripe-підписку.'}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {!isGuest && (
+              <button
+                onClick={openBillingPortal}
+                disabled={portalLoading}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] hover:border-accent hover:text-accent disabled:opacity-60"
+              >
+                <CreditCard size={14} />
+                {portalLoading ? 'Відкриваю...' : 'Підписка'}
+              </button>
+            )}
+            <button
+              onClick={() => signOut({ callbackUrl: '/' })}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] hover:border-accent hover:text-accent"
             >
-              <option value="lose">Схуднення</option>
-              <option value="maintain">Підтримка форми</option>
-              <option value="gain">Набір маси</option>
-              <option value="perform">Спортивні результати</option>
-            </select>
+              <LogOut size={14} />
+              Вийти
+            </button>
+          </div>
+        </div>
+      </SettingsSection>
+
+      <SettingsSection icon={Target} title="Цілі здоров'я" description="Налаштуйте особисті цілі або застосуйте готовий пресет.">
+        <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {(Object.keys(GOAL_LABELS) as Settings['goal'][]).map((goal) => (
+            <button
+              key={goal}
+              onClick={() => setSettings(applyGoalPreset(settings, goal))}
+              className={`rounded-xl border p-3 text-left transition-colors ${
+                settings.goal === goal ? 'border-accent bg-accent/10 text-accent' : 'border-border bg-bg-elevated text-text-muted hover:border-accent/50 hover:text-text'
+              }`}
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                {settings.goal === goal && <CheckCircle2 size={14} />}
+                {GOAL_LABELS[goal]}
+              </div>
+              <div className="mt-1 text-[11.5px] opacity-80">Підібрати калорії, білок і тренування</div>
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Field label="Вага, кг">
+            <input type="number" min={20} max={300} step={0.1} value={settings.weightKg} onChange={(e) => setSettings({ ...settings, weightKg: parseFloat(e.target.value) || 0 })} className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text" />
           </Field>
           <Field label="Цільовий сон, год">
-            <input
-              type="number"
-              min={4}
-              max={12}
-              step={0.5}
-              value={settings.sleepTarget}
-              onChange={(e) => setSettings({ ...settings, sleepTarget: parseFloat(e.target.value) || 0 })}
-              className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text"
-            />
+            <input type="number" min={4} max={12} step={0.5} value={settings.sleepTarget} onChange={(e) => setSettings({ ...settings, sleepTarget: parseFloat(e.target.value) || 0 })} className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text" />
           </Field>
-          <Field label="Цільові калорії/день">
-            <input
-              type="number"
-              min={800}
-              max={6000}
-              step={10}
-              value={settings.calTarget}
-              onChange={(e) => setSettings({ ...settings, calTarget: parseFloat(e.target.value) || 0 })}
-              className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text"
-            />
+          <Field label="Калорії на день">
+            <input type="number" min={800} max={6000} step={10} value={settings.calTarget} onChange={(e) => setSettings({ ...settings, calTarget: parseFloat(e.target.value) || 0 })} className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text" />
           </Field>
-          <Field label="Цільовий білок, г/кг">
-            <input
-              type="number"
-              min={0.5}
-              max={4}
-              step={0.1}
-              value={settings.proteinTarget}
-              onChange={(e) => setSettings({ ...settings, proteinTarget: parseFloat(e.target.value) || 0 })}
-              className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text"
-            />
+          <Field label="Білок, г/кг">
+            <input type="number" min={0.5} max={4} step={0.1} value={settings.proteinTarget} onChange={(e) => setSettings({ ...settings, proteinTarget: parseFloat(e.target.value) || 0 })} className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text" />
           </Field>
           <Field label="Тренувань на тиждень">
-            <input
-              type="number"
-              min={0}
-              max={14}
-              step={1}
-              value={settings.workoutsTarget}
-              onChange={(e) => setSettings({ ...settings, workoutsTarget: parseInt(e.target.value, 10) || 0 })}
-              className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text"
-            />
+            <input type="number" min={0} max={14} step={1} value={settings.workoutsTarget} onChange={(e) => setSettings({ ...settings, workoutsTarget: parseInt(e.target.value, 10) || 0 })} className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text" />
           </Field>
+          <div className="rounded-xl border border-border bg-bg-elevated p-3 text-xs text-text-muted">
+            <div className="font-semibold text-text">Розрахунок</div>
+            <div className="mt-1">Білок: {dailyProtein || '-'} г/день</div>
+            <div>Активність: приблизно {weeklyWorkoutMinutes} хв/тиждень</div>
+          </div>
         </div>
-        <button onClick={saveSettings} className="mt-2 rounded-lg bg-accent-strong px-4 py-2 text-[13.5px] font-semibold text-[#06281c]">
-          Зберегти
-        </button>
-      </div>
+      </SettingsSection>
 
-      <div className="mb-4.5 rounded-2xl border border-border bg-bg-card p-5">
-        <h3 className="mb-1.5 text-[15px]">AI-аналіз (опційно)</h3>
-        <p className="text-xs text-text-muted">
-          Без ключа застосунок використовує вбудований аналітичний рушій (правила + тренди) на сервері. Якщо додати
-          власний ключ Anthropic API, поради генеруватимуться моделлю Claude. Ключ зберігається в базі даних вашого
-          застосунку і використовується лише сервером — у браузер він не потрапляє.
-        </p>
-        <p className="mt-1 text-xs text-text-muted">
-          Поточний стан: {settings.hasApiKey ? <span className="text-accent-strong">ключ налаштовано</span> : <span>ключ не задано</span>}
-        </p>
-        <div className="my-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <SettingsSection icon={Wand2} title="AI-аналіз" description="Поради можуть працювати локально або через ваш Anthropic API ключ.">
+        <div className="mb-3 rounded-xl border border-border bg-bg-elevated p-3 text-xs text-text-muted">
+          <div className="flex items-center gap-2 font-semibold text-text">
+            <ShieldCheck size={14} className="text-accent" />
+            Поточний стан: {settings.hasApiKey ? <span className="text-accent-strong">AI-ключ налаштовано</span> : <span>локальний аналіз без ключа</span>}
+          </div>
+          <p className="mt-1 leading-5">
+            Ключ зберігається на сервері та не показується у браузері. Якщо ключ не задано, застосунок використовує вбудовані правила і тренди.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
           <Field label="Anthropic API ключ">
-            <input
-              type="password"
-              placeholder="sk-ant-..."
-              value={apiKeyInput}
-              onChange={(e) => setApiKeyInput(e.target.value)}
-              className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text"
-            />
+            <input type="password" placeholder="sk-ant-..." value={apiKeyInput} onChange={(e) => setApiKeyInput(e.target.value)} className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text" />
           </Field>
+          <button onClick={saveApiKey} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-accent-strong px-4 py-2 text-[13px] font-semibold text-[#06281c]">
+            <KeyRound size={14} />
+            Зберегти ключ
+          </button>
+          <button onClick={clearApiKey} className="rounded-lg border border-danger/40 px-4 py-2 text-[13px] text-danger">
+            Видалити
+          </button>
         </div>
-        <button onClick={saveApiKey} className="mr-2 mt-2 rounded-lg bg-accent-strong px-4 py-2 text-[13.5px] font-semibold text-[#06281c]">
-          Зберегти ключ
-        </button>
-        <button onClick={clearApiKey} className="mt-2 rounded-lg border border-danger/40 px-4 py-2 text-[13.5px] text-danger">
-          Видалити ключ
-        </button>
-      </div>
+      </SettingsSection>
 
-      <div className="mb-4.5 rounded-2xl border border-border bg-bg-card p-5">
-        <h3 className="mb-1.5 text-[15px]">Дані</h3>
-        <p className="text-xs text-text-muted">
-          Усі дані зберігаються у вашій PostgreSQL базі даних. Ви можете завантажити резервну копію або повністю очистити застосунок.
-        </p>
-        <a
-          href="/api/backup"
-          className="mr-2 mt-2 inline-block rounded-lg border border-border bg-bg-elevated px-4 py-2 text-[13.5px]"
-        >
-          Завантажити резервну копію (JSON)
-        </a>
-        <button onClick={wipeAll} className="mt-2 rounded-lg border border-danger/40 px-4 py-2 text-[13.5px] text-danger">
-          Видалити всі дані
-        </button>
+      <SettingsSection icon={Database} title="Дані та розділи" description="Швидке наповнення, резервні копії та експорт окремих розділів.">
+        <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <button onClick={seedDemoData} disabled={seedingDemo} className="rounded-xl border border-accent/30 bg-accent/10 p-3 text-left transition-colors hover:border-accent/60 disabled:opacity-60">
+            <Sparkles size={17} className="mb-2 text-accent" />
+            <div className="text-sm font-semibold text-text">{seedingDemo ? 'Додаю демо...' : 'Заповнити демо-даними'}</div>
+            <div className="mt-1 text-xs text-text-muted">Створює 14 днів прикладів для графіків.</div>
+          </button>
+          <a href="/api/backup" className="rounded-xl border border-border bg-bg-elevated p-3 transition-colors hover:border-accent/50">
+            <Download size={17} className="mb-2 text-info" />
+            <div className="text-sm font-semibold text-text">Резервна копія JSON</div>
+            <div className="mt-1 text-xs text-text-muted">Повний backup усіх ваших даних.</div>
+          </a>
+          <button onClick={() => setSettings(DEFAULTS)} className="rounded-xl border border-border bg-bg-elevated p-3 text-left transition-colors hover:border-accent/50">
+            <RotateCcw size={17} className="mb-2 text-warn" />
+            <div className="text-sm font-semibold text-text">Скинути форму</div>
+            <div className="mt-1 text-xs text-text-muted">Повертає цілі до стандартних значень.</div>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {EXPORTS.map(([type, label]) => (
+            <a key={type} href={`/api/export/${type}`} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs text-text-muted hover:border-accent hover:text-accent">
+              <Download size={13} />
+              {label}
+            </a>
+          ))}
+        </div>
+      </SettingsSection>
+
+      <SettingsSection icon={TriangleAlert} title="Небезпечна зона" description="Дії, які змінюють або видаляють багато даних.">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/30 bg-danger/10 p-4">
+          <div>
+            <div className="text-sm font-semibold text-text">Повне очищення застосунку</div>
+            <p className="mt-1 text-xs leading-5 text-text-muted">
+              Видаляє всі записи і скидає налаштування. Перед цим краще завантажити резервну копію.
+            </p>
+          </div>
+          <button onClick={wipeAll} className="inline-flex items-center gap-1.5 rounded-lg border border-danger/40 px-4 py-2 text-[13px] text-danger">
+            <Trash2 size={14} />
+            Видалити все
+          </button>
+        </div>
+      </SettingsSection>
+    </section>
+  );
+}
+
+function SettingsSection({
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mb-4.5 rounded-2xl border border-border bg-bg-card p-5">
+      <div className="mb-4 flex items-start gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+          <Icon size={17} />
+        </div>
+        <div>
+          <h2 className="text-[15px] font-semibold text-text">{title}</h2>
+          <p className="mt-1 text-xs leading-5 text-text-muted">{description}</p>
+        </div>
       </div>
+      {children}
     </section>
   );
 }
