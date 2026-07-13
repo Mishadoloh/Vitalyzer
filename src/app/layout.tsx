@@ -5,7 +5,7 @@ import Toaster from '@/components/Toaster';
 
 export const metadata: Metadata = {
   title: "Vitalyzer — розумний шар над вашими даними здоров'я",
-  description: 'AI-аналіз сну, тренувань і харчування з персональними щоденними порадами.',
+  description: 'Аналіз сну, тренувань і харчування з персональними щоденними порадами.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

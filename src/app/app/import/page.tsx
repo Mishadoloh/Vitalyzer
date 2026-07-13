@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Database,
+  Download,
   Dumbbell,
   Moon,
   Plus,
@@ -55,6 +56,30 @@ const TYPE_META: Record<EntryType, { label: string; hint: string; icon: LucideIc
 
 const TYPES = Object.keys(TYPE_META) as EntryType[];
 
+const SAMPLE_VALUES: Record<string, string> = {
+  date: '2026-07-12',
+  hours: '7.8',
+  quality: '4',
+  bedtime: '23:20',
+  wakeTime: '07:05',
+  type: 'Силове',
+  durationMin: '45',
+  calories: '2150',
+  intensity: '4',
+  avgHR: '128',
+  distanceKm: '5.2',
+  proteinG: '135',
+  carbsG: '240',
+  fatG: '70',
+  waterMl: '2100',
+  weightKg: '77.4',
+  bodyFatPct: '18',
+  mood: '4',
+  energy: '4',
+  stress: '2',
+  notes: 'приклад',
+};
+
 interface QueueItem {
   id: string;
   fileName: string;
@@ -91,7 +116,8 @@ export default function ImportPage() {
   const requiredFields = TYPE_META[mapType].required;
   const optionalFields = getOptionalFields(mapType);
   const mappedRequired = requiredFields.filter((field) => mapping[field]).length;
-  const canImport = Boolean(mapping.date) && mappedRequired >= Math.min(2, requiredFields.length);
+  const missingRequired = requiredFields.length - mappedRequired;
+  const canImport = missingRequired === 0;
 
   const fileSummary = useMemo(() => {
     if (!modalItem) return null;
@@ -112,6 +138,19 @@ export default function ImportPage() {
     setMapType(type);
     setMapping(guessMapping(type, item.headers || []));
     setShowOptional(false);
+  }
+
+  function downloadTemplate(type: EntryType) {
+    const fields = [...TYPE_META[type].required, ...getOptionalFields(type)];
+    const escapeCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
+    const csv = [fields.join(','), fields.map((field) => escapeCell(SAMPLE_VALUES[field] || '')).join(',')].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `vitalyzer-${type}-template.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   async function handleFiles(files: File[]) {
@@ -224,24 +263,35 @@ export default function ImportPage() {
 
   return (
     <section>
-      <header className="mb-4.5">
-        <h1 className="m-0 text-[22px]">Імпорт даних</h1>
-        <p className="mt-1 max-w-2xl text-sm text-text-muted">
-          Завантажте CSV або Excel з телефона чи комп'ютера. Ми автоматично знайдемо колонки, а вам лишиться швидко перевірити відповідність.
-        </p>
+      <header className="mb-4.5 rounded-2xl border border-border bg-bg-card p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="m-0 text-[22px]">Імпорт даних</h1>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-text-muted">
+              Завантажте CSV або Excel з телефона чи комп'ютера. Колонки визначаються автоматично, а перед збереженням ви бачите коротку перевірку.
+            </p>
+          </div>
+          <button
+            onClick={() => downloadTemplate(preferredType)}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm font-semibold text-accent hover:border-accent"
+          >
+            <Download size={16} />
+            CSV-шаблон
+          </button>
+        </div>
       </header>
 
-      <div className="mb-4 grid grid-cols-3 gap-2 text-center text-[11px] text-text-muted sm:grid-cols-3">
-        <Step number="1" label="Тип" active />
-        <Step number="2" label="Файл" active={queue.length > 0} />
-        <Step number="3" label="Перевірка" active={completedCount > 0} />
+      <div className="mb-4 grid grid-cols-3 gap-2 text-center text-[11px] text-text-muted">
+        <Step number="1" label="Оберіть тип" active />
+        <Step number="2" label="Додайте файл" active={queue.length > 0} />
+        <Step number="3" label="Збережіть" active={completedCount > 0} />
       </div>
 
       <div className="mb-4 rounded-2xl border border-border bg-bg-card p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
             <h2 className="text-[15px] font-semibold text-text">Що імпортуємо?</h2>
-            <p className="text-xs text-text-muted">Якщо файл зрозумілий, тип визначиться автоматично.</p>
+            <p className="text-xs text-text-muted">Виберіть тип вручну або залиште як підказку для автоматичного розпізнавання.</p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -263,6 +313,9 @@ export default function ImportPage() {
             );
           })}
         </div>
+        <div className="mt-3 rounded-xl border border-border bg-bg-elevated p-3 text-xs leading-5 text-text-muted">
+          Для найпростішого імпорту завантажте шаблон, заповніть один рядок або вставте дані з трекера, а потім поверніть файл сюди.
+        </div>
       </div>
 
       <div
@@ -283,7 +336,7 @@ export default function ImportPage() {
         </div>
         <p className="text-base font-semibold text-text">Обрати файл з телефона</p>
         <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-text-muted">
-          Підтримуються `.csv`, `.xlsx`, `.xls`. Можна вибрати кілька файлів одразу.
+          Підтримуються `.csv`, `.xlsx`, `.xls`. Можна вибрати кілька файлів одразу, кожен відкриється на перевірку.
         </p>
         <button className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-accent-strong px-5 py-3 text-sm font-semibold text-[#06281c]">
           <Plus size={16} />
@@ -291,7 +344,15 @@ export default function ImportPage() {
         </button>
       </div>
 
-      <div className="my-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="my-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <button
+          onClick={() => downloadTemplate(preferredType)}
+          className="rounded-2xl border border-border bg-bg-card p-4 text-left transition-colors hover:border-accent/50"
+        >
+          <Download size={18} className="mb-2 text-accent" />
+          <div className="text-sm font-semibold text-text">Завантажити шаблон</div>
+          <div className="mt-1 text-xs text-text-muted">Готові колонки для вибраного розділу: {TYPE_META[preferredType].label}.</div>
+        </button>
         <button
           onClick={loadDemoData}
           disabled={seedingDemo}
@@ -371,7 +432,9 @@ export default function ImportPage() {
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold text-text">Головні поля</div>
-                  <div className="text-xs text-text-muted">Перевірте тільки найважливіше для імпорту.</div>
+                  <div className="text-xs text-text-muted">
+                    {missingRequired > 0 ? `Ще потрібно вибрати: ${missingRequired}` : 'Усі потрібні колонки знайдені.'}
+                  </div>
                 </div>
                 <span className="rounded-full bg-accent/10 px-2 py-1 text-[11px] text-accent">
                   {mappedRequired}/{requiredFields.length}

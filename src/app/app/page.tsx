@@ -1,22 +1,42 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { CheckCircle2, Dumbbell, Moon, PlusCircle, Sparkles, TrendingUp, UploadCloud, Utensils } from 'lucide-react';
+import {
+  Activity,
+  BarChart3,
+  CheckCircle2,
+  Dumbbell,
+  Flame,
+  Moon,
+  PlusCircle,
+  Scale,
+  Settings,
+  Smile,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+  UploadCloud,
+  Utensils,
+  type LucideIcon,
+} from 'lucide-react';
 import AdviceCard from '@/components/AdviceCard';
 import ScoreRow from '@/components/ScoreRow';
-import SleepChart from '@/components/charts/SleepChart';
-import WorkoutChart from '@/components/charts/WorkoutChart';
-import NutritionChart from '@/components/charts/NutritionChart';
-import BalanceChart from '@/components/charts/BalanceChart';
-import WeightChart from '@/components/charts/WeightChart';
-import MoodChart from '@/components/charts/MoodChart';
 import { showToast } from '@/lib/toast';
-import type { AdviceResult, Settings } from '@/lib/types';
+import type { AdviceResult, Settings as UserSettings } from '@/lib/types';
+
+const SleepChart = dynamic(() => import('@/components/charts/SleepChart'), { ssr: false, loading: () => <ChartLoading /> });
+const WorkoutChart = dynamic(() => import('@/components/charts/WorkoutChart'), { ssr: false, loading: () => <ChartLoading /> });
+const NutritionChart = dynamic(() => import('@/components/charts/NutritionChart'), { ssr: false, loading: () => <ChartLoading /> });
+const BalanceChart = dynamic(() => import('@/components/charts/BalanceChart'), { ssr: false, loading: () => <ChartLoading /> });
+const WeightChart = dynamic(() => import('@/components/charts/WeightChart'), { ssr: false, loading: () => <ChartLoading /> });
+const MoodChart = dynamic(() => import('@/components/charts/MoodChart'), { ssr: false, loading: () => <ChartLoading /> });
 
 interface SleepRow {
   date: string;
   hours: number;
+  quality?: number | null;
 }
 interface WorkoutRow {
   date: string;
@@ -26,6 +46,7 @@ interface NutritionRow {
   date: string;
   calories: number;
   proteinG: number;
+  waterMl?: number | null;
 }
 interface WeightRow {
   date: string;
@@ -35,6 +56,7 @@ interface MoodRow {
   date: string;
   mood: number;
   energy: number;
+  stress?: number | null;
 }
 
 function todayISO(): string {
@@ -49,11 +71,27 @@ function addDays(iso: string, delta: number): string {
 }
 
 function average(values: number[]): number | null {
-  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+  const valid = values.filter((value) => Number.isFinite(value));
+  return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null;
+}
+
+function round(value: number | null, digits = 1): number | null {
+  if (value === null || !Number.isFinite(value)) return null;
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
 }
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function formatNumber(value: number | null, suffix = ''): string {
+  return value === null ? '-' : `${value}${suffix}`;
+}
+
+function recent<T extends { date: string }>(rows: T[], days = 14): T[] {
+  const from = addDays(todayISO(), -(days - 1));
+  return rows.filter((entry) => entry.date >= from);
 }
 
 function buildFallbackBalanceScores({
@@ -65,13 +103,12 @@ function buildFallbackBalanceScores({
   sleep: SleepRow[];
   workouts: WorkoutRow[];
   nutrition: NutritionRow[];
-  settings: Settings | null;
+  settings: UserSettings | null;
 }) {
   if (!settings) return { sleep: null, workouts: null, nutrition: null };
-  const from = addDays(todayISO(), -13);
-  const recentSleep = sleep.filter((entry) => entry.date >= from);
-  const recentWorkouts = workouts.filter((entry) => entry.date >= from);
-  const recentNutrition = nutrition.filter((entry) => entry.date >= from);
+  const recentSleep = recent(sleep);
+  const recentWorkouts = recent(workouts);
+  const recentNutrition = recent(nutrition);
 
   const avgSleep = average(recentSleep.map((entry) => entry.hours));
   const sleepScore = avgSleep === null ? null : clamp(Math.round(100 - Math.abs(avgSleep - settings.sleepTarget) * 18));
@@ -101,9 +138,52 @@ export default function DashboardPage() {
   const [nutrition, setNutrition] = useState<NutritionRow[]>([]);
   const [weight, setWeight] = useState<WeightRow[]>([]);
   const [mood, setMood] = useState<MoodRow[]>([]);
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const [settings, setSettings] = useState<UserSettings | null>(null);
   const [today, setToday] = useState('');
   const [todayKey, setTodayKey] = useState('');
+
+  const dashboardMetrics = useMemo(() => {
+    const recentSleep = recent(sleep);
+    const recentWorkouts = recent(workouts);
+    const recentNutrition = recent(nutrition);
+    const recentMood = recent(mood);
+    const recentWeight = recent(weight).sort((a, b) => a.date.localeCompare(b.date));
+
+    const avgSleep = round(average(recentSleep.map((entry) => entry.hours)));
+    const avgQuality = round(average(recentSleep.map((entry) => entry.quality ?? 0).filter(Boolean)));
+    const workoutMinutes = recentWorkouts.reduce((sum, entry) => sum + (entry.durationMin || 0), 0);
+    const avgCalories = round(average(recentNutrition.map((entry) => entry.calories)), 0);
+    const avgProtein = round(average(recentNutrition.map((entry) => entry.proteinG)), 0);
+    const avgWater = round(average(recentNutrition.map((entry) => entry.waterMl || 0).filter(Boolean)), 0);
+    const avgMood = round(average(recentMood.map((entry) => entry.mood)));
+    const avgEnergy = round(average(recentMood.map((entry) => entry.energy)));
+    const avgStress = round(average(recentMood.map((entry) => entry.stress ?? 0).filter(Boolean)));
+    const firstWeight = recentWeight[0]?.weightKg ?? null;
+    const latestWeight = recentWeight[recentWeight.length - 1]?.weightKg ?? null;
+    const weightDelta = firstWeight !== null && latestWeight !== null ? round(latestWeight - firstWeight) : null;
+    const loggedDays = new Set([
+      ...recentSleep.map((entry) => entry.date),
+      ...recentWorkouts.map((entry) => entry.date),
+      ...recentNutrition.map((entry) => entry.date),
+      ...recentMood.map((entry) => entry.date),
+    ]).size;
+
+    return {
+      avgSleep,
+      avgQuality,
+      workoutCount: recentWorkouts.length,
+      workoutMinutes,
+      avgCalories,
+      avgProtein,
+      avgWater,
+      avgMood,
+      avgEnergy,
+      avgStress,
+      latestWeight: round(latestWeight),
+      weightDelta,
+      loggedDays,
+    };
+  }, [mood, nutrition, sleep, weight, workouts]);
 
   const totalEntries = sleep.length + workouts.length + nutrition.length + weight.length + mood.length;
   const hasAnyData = totalEntries > 0;
@@ -129,6 +209,10 @@ export default function DashboardPage() {
     nutrition: advice?.scores.nutrition ?? fallbackBalanceScores.nutrition,
   };
   const hasBalanceScore = [balanceScores.sleep, balanceScores.workouts, balanceScores.nutrition].some((value) => value !== null);
+  const scoreParts = [balanceScores.sleep, balanceScores.workouts, balanceScores.nutrition].filter((value): value is number => value !== null && value !== undefined);
+  const heroScore = advice?.overallScore ?? (scoreParts.length ? Math.round(average(scoreParts) ?? 0) : null);
+  const heroScoreText = heroScore === null ? '-' : String(heroScore);
+  const completionPct = Math.round((doneToday / Math.max(1, todayItems.length)) * 100);
 
   useEffect(() => {
     setToday(new Date().toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', weekday: 'long' }));
@@ -179,37 +263,87 @@ export default function DashboardPage() {
   }
 
   return (
-    <section className="pb-8">
-      <header className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-border bg-bg-card p-4">
-        <div>
-          <p className="mb-1 text-xs font-medium text-accent">{today}</p>
-          <h1 className="m-0 text-[22px] text-text">Щоденний дашборд</h1>
-          <p className="mt-1 max-w-2xl text-sm text-text-muted">Один погляд на сон, активність, харчування, вагу й настрій.</p>
+    <section className="pb-10">
+      <header className="mb-5 overflow-hidden rounded-3xl border border-border bg-[linear-gradient(135deg,rgba(30,35,47,0.96),rgba(19,22,31,0.98)_45%,rgba(11,24,27,0.96))] shadow-2xl shadow-black/25">
+        <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[1fr_320px] lg:p-6">
+          <div className="min-w-0">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/25 bg-accent/10 px-3 py-1 text-[12px] font-medium text-accent">
+                <Activity size={13} />
+                {today || 'сьогодні'}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-info/25 bg-info/10 px-3 py-1 text-[12px] text-info">
+                <BarChart3 size={13} />
+                {dashboardMetrics.loggedDays}/14 днів із записами
+              </span>
+            </div>
+            <h1 className="m-0 max-w-2xl text-2xl font-bold leading-tight text-text sm:text-3xl">
+              Командний центр здоров'я
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
+              Зведення по сну, активності, харчуванню, тілу й настрою без зайвого шуму: що вже зроблено, що просідає і куди натиснути далі.
+            </p>
+
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <HeroMetric icon={CheckCircle2} label="План" value={`${doneToday}/${todayItems.length}`} tone="accent" />
+              <HeroMetric icon={Flame} label="Готовність" value={heroScore === null ? '-' : `${heroScore}/100`} tone="warn" />
+              <HeroMetric icon={TrendingDown} label="Вага" value={formatNumber(dashboardMetrics.weightDelta, ' кг')} tone="info" />
+              <HeroMetric icon={Smile} label="Настрій" value={formatNumber(dashboardMetrics.avgMood, '/5')} tone="neutral" />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-bg/35 p-4 backdrop-blur">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs uppercase tracking-[0.14em] text-text-muted">стан зараз</div>
+                <div className="mt-1 text-sm font-semibold text-text">{heroScore === null ? 'Потрібні дані' : heroScore >= 75 ? 'Стабільний ритм' : heroScore >= 55 ? 'Є що підтягнути' : 'Почніть з малого'}</div>
+              </div>
+              <div
+                className="grid h-24 w-24 place-items-center rounded-full"
+                style={{ background: `conic-gradient(#34d399 ${heroScore ?? completionPct}%, rgba(255,255,255,0.08) 0)` }}
+              >
+                <div className="grid h-[76px] w-[76px] place-items-center rounded-full border border-border bg-bg-card text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-text">{heroScoreText}</div>
+                    <div className="text-[10px] text-text-muted">/100</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Link href="/app/quick-add" className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent-strong px-3 py-3 text-[13px] font-semibold text-[#06281c]">
+                <PlusCircle size={15} />
+                Запис
+              </Link>
+              <Link href="/app/trends" className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-bg-elevated px-3 py-3 text-[13px] text-text-muted hover:border-accent hover:text-accent">
+                <BarChart3 size={15} />
+                Тренди
+              </Link>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-bg-elevated">
+              <div className="h-full rounded-full bg-accent-strong transition-[width]" style={{ width: `${completionPct}%` }} />
+            </div>
+            <div className="mt-2 text-[11px] text-text-muted">Сьогодні закрито {completionPct}% базового плану.</div>
+          </div>
         </div>
-        <Link
-          href="/app/quick-add"
-          className="inline-flex items-center gap-1.5 rounded-xl bg-accent-strong px-4 py-2.5 text-[13px] font-semibold text-[#06281c]"
-        >
-          <PlusCircle size={15} />
-          Швидкий запис
-        </Link>
       </header>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
         {categoryProgress.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className="rounded-2xl border border-border bg-bg-card p-3.5 transition-colors hover:border-accent/40 hover:bg-bg-elevated"
-          >
+          <Link key={item.label} href={item.href} className="group rounded-2xl border border-border bg-bg-card p-3.5 shadow-sm shadow-black/10 transition-colors hover:border-accent/40 hover:bg-bg-elevated">
             <div className="flex items-center justify-between gap-2">
-              <span className={`flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 ${item.tone}`}>
+              <span className={`flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 ${item.tone}`}>
                 <item.icon size={16} />
               </span>
               {item.count > 0 ? <CheckCircle2 size={15} className="text-accent-strong" /> : <PlusCircle size={15} className="text-text-muted" />}
             </div>
-            <div className="mt-3 text-lg font-semibold text-text">{item.count}</div>
-            <div className="text-xs text-text-muted">{item.label}</div>
+            <div className="mt-3 flex items-end justify-between gap-2">
+              <div>
+                <div className="text-xl font-bold text-text">{item.count}</div>
+                <div className="text-xs text-text-muted">{item.label}</div>
+              </div>
+              <span className="text-[11px] text-text-muted opacity-0 transition-opacity group-hover:opacity-100">відкрити</span>
+            </div>
           </Link>
         ))}
       </div>
@@ -223,10 +357,7 @@ export default function DashboardPage() {
                 Заповнено {doneToday} з {todayItems.length}. Додайте відсутні показники, щоб порада була точнішою.
               </p>
             </div>
-            <Link
-              href="/app/quick-add"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] text-text-muted hover:border-accent hover:text-accent"
-            >
+            <Link href="/app/quick-add" className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] text-text-muted hover:border-accent hover:text-accent">
               <PlusCircle size={14} />
               Додати запис
             </Link>
@@ -249,15 +380,79 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-        <button
-          onClick={seedDemoData}
-          disabled={seedingDemo}
-          className="rounded-2xl border border-accent/30 bg-accent/10 p-4 text-left transition-colors hover:border-accent/60 disabled:opacity-60"
-        >
+        <button onClick={seedDemoData} disabled={seedingDemo} className="rounded-2xl border border-accent/30 bg-accent/10 p-4 text-left transition-colors hover:border-accent/60 disabled:opacity-60">
           <Sparkles size={18} className="mb-3 text-accent" />
           <span className="block text-sm font-semibold text-text">{seedingDemo ? 'Додаємо демо...' : 'Заповнити демо-даними'}</span>
           <span className="mt-1 block text-xs leading-5 text-text-muted">14 днів сну, харчування, ваги, настрою і тренувань.</span>
         </button>
+      </div>
+
+      <div className="mb-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-[16px] font-semibold text-text">Міні-дашборди</h2>
+            <p className="mt-1 text-xs text-text-muted">Окремі панелі для швидкого контролю відновлення, активності, харчування й тіла.</p>
+          </div>
+          <Link href="/app/trends" className="rounded-lg border border-border px-3 py-2 text-xs text-text-muted hover:border-accent hover:text-accent">
+            Детальні тренди
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <MiniDashboard
+            icon={Moon}
+            title="Відновлення"
+            subtitle="сон, енергія, стрес"
+            score={balanceScores.sleep}
+            tone="accent"
+            rows={[
+              ['Сон', formatNumber(dashboardMetrics.avgSleep, ' год')],
+              ['Якість', formatNumber(dashboardMetrics.avgQuality, '/5')],
+              ['Енергія', formatNumber(dashboardMetrics.avgEnergy, '/5')],
+            ]}
+          />
+          <MiniDashboard
+            icon={Dumbbell}
+            title="Активність"
+            subtitle="тренування і навантаження"
+            score={balanceScores.workouts}
+            tone="info"
+            rows={[
+              ['Тренувань', String(dashboardMetrics.workoutCount)],
+              ['Хвилин', `${dashboardMetrics.workoutMinutes}`],
+              ['Ціль/тижд.', settings ? `${settings.workoutsTarget}` : '-'],
+            ]}
+          />
+          <MiniDashboard
+            icon={Utensils}
+            title="Харчування"
+            subtitle="ккал, білок, вода"
+            score={balanceScores.nutrition}
+            tone="warn"
+            rows={[
+              ['Калорії', formatNumber(dashboardMetrics.avgCalories, ' ккал')],
+              ['Білок', formatNumber(dashboardMetrics.avgProtein, ' г')],
+              ['Вода', formatNumber(dashboardMetrics.avgWater, ' мл')],
+            ]}
+          />
+          <MiniDashboard
+            icon={Scale}
+            title="Тіло"
+            subtitle="вага і динаміка"
+            score={null}
+            tone="neutral"
+            rows={[
+              ['Вага', formatNumber(dashboardMetrics.latestWeight, ' кг')],
+              ['Зміна', formatNumber(dashboardMetrics.weightDelta, ' кг')],
+              ['Настрій', formatNumber(dashboardMetrics.avgMood, '/5')],
+            ]}
+          />
+        </div>
+      </div>
+
+      <div className="mb-5 grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <DashboardShortcut icon={PlusCircle} title="Операційний дашборд" text="Швидко закрийте сьогоднішній план." href="/app/quick-add" />
+        <DashboardShortcut icon={UploadCloud} title="Дашборд даних" text="Імпорт, демо-дані та резервні копії." href="/app/import" />
+        <DashboardShortcut icon={Settings} title="Дашборд цілей" text="Сон, калорії, білок і тренування." href="/app/settings" />
       </div>
 
       {!loadingAdvice && !hasAnyData && (
@@ -329,6 +524,93 @@ export default function DashboardPage() {
   );
 }
 
+function MiniDashboard({
+  icon: Icon,
+  title,
+  subtitle,
+  score,
+  rows,
+  tone,
+}: {
+  icon: LucideIcon;
+  title: string;
+  subtitle: string;
+  score: number | null | undefined;
+  rows: [string, string][];
+  tone: 'accent' | 'info' | 'warn' | 'neutral';
+}) {
+  const toneClass = tone === 'info' ? 'text-info bg-info/10' : tone === 'warn' ? 'text-warn bg-warn/10' : tone === 'neutral' ? 'text-text-muted bg-white/5' : 'text-accent bg-accent/10';
+  const progress = score === null || score === undefined ? null : clamp(score);
+
+  return (
+    <div className="rounded-2xl border border-border bg-bg-card p-4">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${toneClass}`}>
+            <Icon size={17} />
+          </span>
+          <div>
+            <h3 className="text-sm font-semibold text-text">{title}</h3>
+            <p className="text-[11.5px] text-text-muted">{subtitle}</p>
+          </div>
+        </div>
+        {progress !== null && <span className="rounded-full bg-bg-elevated px-2 py-1 text-xs text-text-muted">{Math.round(progress)}/100</span>}
+      </div>
+      {progress !== null && (
+        <div className="mb-4 h-2 overflow-hidden rounded-full bg-bg-elevated">
+          <div className="h-full rounded-full bg-accent-strong" style={{ width: `${progress}%` }} />
+        </div>
+      )}
+      <div className="space-y-2">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex items-center justify-between gap-3 text-xs">
+            <span className="text-text-muted">{label}</span>
+            <span className="font-semibold text-text">{value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HeroMetric({
+  icon: Icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  tone: 'accent' | 'info' | 'warn' | 'neutral';
+}) {
+  const toneClass = tone === 'info' ? 'text-info bg-info/10' : tone === 'warn' ? 'text-warn bg-warn/10' : tone === 'neutral' ? 'text-text-muted bg-white/5' : 'text-accent bg-accent/10';
+  return (
+    <div className="rounded-2xl border border-white/10 bg-bg/25 p-3">
+      <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-xl ${toneClass}`}>
+        <Icon size={15} />
+      </div>
+      <div className="text-[11px] text-text-muted">{label}</div>
+      <div className="mt-0.5 text-lg font-bold text-text">{value}</div>
+    </div>
+  );
+}
+
+function DashboardShortcut({ icon: Icon, title, text, href }: { icon: LucideIcon; title: string; text: string; href: string }) {
+  return (
+    <Link href={href} className="group rounded-2xl border border-border bg-bg-card p-4 shadow-sm shadow-black/10 transition-colors hover:border-accent/40 hover:bg-bg-elevated">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/10 text-accent">
+          <Icon size={18} />
+        </span>
+        <span className="text-xs text-text-muted opacity-0 transition-opacity group-hover:opacity-100">перейти</span>
+      </div>
+      <div className="text-sm font-semibold text-text">{title}</div>
+      <p className="mt-1 text-xs leading-5 text-text-muted">{text}</p>
+    </Link>
+  );
+}
+
 function ChartCard({
   title,
   empty,
@@ -357,6 +639,16 @@ function ChartCard({
           Даних поки немає. Додайте запис або імпортуйте файл, щоб побачити тренд.
         </div>
       )}
+    </div>
+  );
+}
+
+function ChartLoading() {
+  return (
+    <div className="flex h-[220px] items-center justify-center rounded-xl border border-border bg-bg-elevated/60">
+      <div className="h-2 w-28 overflow-hidden rounded-full bg-bg-card">
+        <div className="h-full w-1/2 animate-pulse rounded-full bg-accent/60" />
+      </div>
     </div>
   );
 }

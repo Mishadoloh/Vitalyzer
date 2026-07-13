@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
     try {
       finalAdvice = await generateAiAdvice(ruleBased, apiKey, settingsRow.aiModel);
     } catch (e) {
-      warning = 'AI-аналіз недоступний, використано локальний рушій: ' + (e instanceof Error ? e.message : String(e));
+      warning = 'Розширений аналіз недоступний, використано локальний рушій: ' + (e instanceof Error ? e.message : String(e));
       finalAdvice = ruleBased;
     }
   }

@@ -1,6 +1,6 @@
 /*
  * ai.ts
- * Опційне AI-покращення поради дня через Claude API (Anthropic Messages API).
+ * Опційне покращення поради дня через Claude API (Anthropic Messages API).
  * Виконується виключно на сервері (Route Handler) — ключ ніколи не потрапляє
  * в браузер. Якщо ключ не налаштований або запит не вдався, викликач має
  * підстрахуватись локальним рушієм (insights.ts).
@@ -18,7 +18,7 @@ function buildPrompt(ruleBased: AdviceResult): string {
   const wt = stats.weight;
   const md = stats.mood;
 
-  return `Ти — персональний AI-асистент зі здоров'я. На основі зведеної статистики користувача за останні 7 днів
+  return `Ти — персональний помічник зі здоров'я. На основі зведеної статистики користувача за останні 7 днів
 дай коротку персоналізовану щоденну пораду українською мовою. Будь конкретним і практичним, уникай загальних фраз.
 
 Дані:
@@ -54,18 +54,18 @@ export async function generateAiAdvice(
   }
 
   const jsonMatch = textBlock.text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('Не вдалося розпарсити відповідь AI');
+  if (!jsonMatch) throw new Error('Не вдалося розпарсити відповідь розширеного аналізу');
 
   let parsed: { tag?: string; items?: string[] };
   try {
     parsed = JSON.parse(jsonMatch[0]);
   } catch {
-    throw new Error('Не вдалося розпарсити відповідь AI (невалідний JSON)');
+    throw new Error('Не вдалося розпарсити відповідь розширеного аналізу (невалідний JSON)');
   }
 
   return {
     source: 'ai',
-    tag: parsed.tag || 'AI-порада',
+    tag: parsed.tag || 'Порада дня',
     overallScore: ruleBased.overallScore,
     scores: ruleBased.scores,
     stats: ruleBased.stats,

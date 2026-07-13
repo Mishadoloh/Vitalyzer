@@ -157,7 +157,7 @@ model MoodEntry {
   @@index([userId, date])
 }
 
-// One settings row per user holding personal goals & AI key.
+// One settings row per user holding personal goals and optional analysis key.
 model Settings {
   id              String  @id @default(cuid())
   userId          String  @unique

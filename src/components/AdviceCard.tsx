@@ -1,6 +1,6 @@
 'use client';
 
-import { Bot, RefreshCw, Sparkles } from 'lucide-react';
+import { RefreshCw, Sparkles } from 'lucide-react';
 import type { AdviceResult } from '@/lib/types';
 
 export default function AdviceCard({
@@ -39,8 +39,8 @@ export default function AdviceCard({
         {!loading && advice && advice.items.length > 0 && (
           <>
             <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-2.5 py-1 text-[11px] text-accent">
-              {advice.source === 'ai' ? <Bot size={12} /> : <Sparkles size={12} />}
-              {advice.tag} · {advice.source === 'ai' ? 'AI-аналіз' : 'Локальний аналіз'}
+              <Sparkles size={12} />
+              {advice.tag} · {advice.source === 'ai' ? 'Розширений аналіз' : 'Локальний аналіз'}
             </span>
             <ul className="mt-2 space-y-1.5 pl-5">
               {advice.items.map((item, index) => (

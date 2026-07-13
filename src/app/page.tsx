@@ -33,8 +33,8 @@ const FEATURES = [
   },
   {
     icon: Sparkles,
-    title: 'AI-порада на кожен день',
-    text: 'Розумний рушій (опційно на базі Claude) аналізує сон, тренування, харчування, вагу й настрій і дає одну конкретну пораду замість купи графіків.',
+    title: 'Порада на кожен день',
+    text: 'Рушій трендів аналізує сон, тренування, харчування, вагу й настрій і дає одну конкретну дію замість купи графіків.',
   },
   {
     icon: LineChart,
@@ -54,7 +54,7 @@ const FEATURES = [
   {
     icon: ShieldCheck,
     title: 'Приватність за замовчуванням',
-    text: 'AI-аналіз опційний: без ключа все працює на локальному рушику, дані нікуди не йдуть.',
+    text: 'Основний аналіз працює локально: ваші записи лишаються під вашим контролем, а резервну копію можна забрати в будь-який момент.',
   },
 ];
 
@@ -88,7 +88,7 @@ const COMPARISON = [
   { label: 'Готова порада на день замість графіків для розшифровки', vitalyzer: true, other: false },
   { label: 'Серії (streaks) і порівняння тижня з тижнем', vitalyzer: true, other: false },
   { label: 'Працює з будь-яким трекером (Apple Health, Garmin, Strava...)', vitalyzer: true, other: false },
-  { label: 'AI-аналіз опційний, без обов’язкової передачі даних', vitalyzer: true, other: false },
+  { label: 'Локальний аналіз без обов’язкової передачі даних', vitalyzer: true, other: false },
 ];
 
 const FAQ = [
@@ -98,7 +98,7 @@ const FAQ = [
   },
   {
     q: 'Що з приватністю даних?',
-    a: 'За замовчуванням аналіз локальний. AI-режим на базі Claude — опційний і надсилає лише агреговану статистику, без сирих персональних даних.',
+    a: 'За замовчуванням аналіз локальний. Дані можна експортувати резервною копією, а сирі записи не потрібні стороннім сервісам для базових порад.',
   },
   {
     q: 'Чи можна скасувати підписку в будь-який момент?',
@@ -136,7 +136,7 @@ async function getAuthState(): Promise<'anonymous' | 'guest' | 'unsubscribed' | 
 
 const PRICING_ITEMS = [
   'Необмежений швидкий запис і CSV-імпорт',
-  'Щоденна AI-порада + локальний рушій як фолбек',
+  'Щоденна персональна порада і локальний аналіз',
   'Тренди, серії (streaks) і тижневі порівняння',
   'Резервне копіювання та повний контроль над даними',
 ];
@@ -171,11 +171,11 @@ export default async function LandingPage() {
         <div className="relative text-center lg:text-left">
           <span className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-border bg-bg-card px-3 py-1 text-[12px] text-text-muted">
             <Sparkles size={13} className="text-accent" />
-            AI-аналіз здоровʼя, а не черговий трекер
+            Аналіз здоровʼя, а не черговий трекер
           </span>
           <h1 className="m-0 text-3xl font-bold leading-tight sm:text-5xl">
-            Персональний AI-трекер здоровʼя,
-            <br className="hidden sm:block" /> що сам аналізує ваші дані
+            Персональний трекер здоровʼя,
+            <br className="hidden sm:block" /> що пояснює ваші дані
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-[15px] text-text-muted sm:text-base lg:mx-0">
             Vitalyzer не замінює ваш трекер сну, тренувань чи харчування — він читає дані, які ви вже збираєте, і

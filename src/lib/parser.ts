@@ -6,7 +6,6 @@
  * нормалізованих записів) надсилається на /api/import.
  */
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
 import type {
   EntryType,
   FieldMapping,
@@ -69,7 +68,7 @@ function normalizeHeader(h: unknown): string {
   return String(h ?? '').trim().toLowerCase();
 }
 
-export function readFileAsRows(file: File): Promise<ParsedFile> {
+export async function readFileAsRows(file: File): Promise<ParsedFile> {
   const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
   if (ext === 'csv') {
     return new Promise((resolve, reject) => {
@@ -85,14 +84,14 @@ export function readFileAsRows(file: File): Promise<ParsedFile> {
       });
     });
   } else if (ext === 'xlsx' || ext === 'xls') {
-    return file.arrayBuffer().then((buf) => {
-      const wb = XLSX.read(buf, { type: 'array', cellDates: true });
-      const sheetName = wb.SheetNames[0];
-      const sheet = wb.Sheets[sheetName];
-      const json = XLSX.utils.sheet_to_json(sheet, { defval: '' }) as Record<string, unknown>[];
-      const headers = json.length ? Object.keys(json[0]) : [];
-      return { headers, rows: json };
-    });
+    const XLSX = await import('xlsx');
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+    const sheetName = wb.SheetNames[0];
+    const sheet = wb.Sheets[sheetName];
+    const json = XLSX.utils.sheet_to_json(sheet, { defval: '' }) as Record<string, unknown>[];
+    const headers = json.length ? Object.keys(json[0]) : [];
+    return { headers, rows: json };
   }
   return Promise.reject(new Error('Непідтримуваний формат файлу: ' + ext));
 }

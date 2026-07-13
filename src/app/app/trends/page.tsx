@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
   Activity,
@@ -20,15 +21,16 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react';
-import SleepChart from '@/components/charts/SleepChart';
-import WorkoutChart from '@/components/charts/WorkoutChart';
-import NutritionChart from '@/components/charts/NutritionChart';
-import BalanceChart from '@/components/charts/BalanceChart';
-import WeightChart from '@/components/charts/WeightChart';
-import MoodChart from '@/components/charts/MoodChart';
 import InsightsCard from '@/components/InsightsCard';
 import { showToast } from '@/lib/toast';
 import type { AdviceResult, Settings } from '@/lib/types';
+
+const SleepChart = dynamic(() => import('@/components/charts/SleepChart'), { ssr: false, loading: () => <ChartLoading /> });
+const WorkoutChart = dynamic(() => import('@/components/charts/WorkoutChart'), { ssr: false, loading: () => <ChartLoading /> });
+const NutritionChart = dynamic(() => import('@/components/charts/NutritionChart'), { ssr: false, loading: () => <ChartLoading /> });
+const BalanceChart = dynamic(() => import('@/components/charts/BalanceChart'), { ssr: false, loading: () => <ChartLoading /> });
+const WeightChart = dynamic(() => import('@/components/charts/WeightChart'), { ssr: false, loading: () => <ChartLoading /> });
+const MoodChart = dynamic(() => import('@/components/charts/MoodChart'), { ssr: false, loading: () => <ChartLoading /> });
 
 type RangeDays = 14 | 30 | 90;
 type ActionTone = 'accent' | 'info' | 'warn' | 'danger';
@@ -181,6 +183,16 @@ function ChartPanel({
           Поки немає даних для цього графіка. Додайте запис або заповніть демо-даними.
         </div>
       )}
+    </div>
+  );
+}
+
+function ChartLoading() {
+  return (
+    <div className="flex h-[220px] items-center justify-center rounded-xl border border-border bg-bg-elevated/60">
+      <div className="h-2 w-28 overflow-hidden rounded-full bg-bg-card">
+        <div className="h-full w-1/2 animate-pulse rounded-full bg-accent/60" />
+      </div>
     </div>
   );
 }

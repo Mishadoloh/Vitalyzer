@@ -17,7 +17,6 @@ import {
   Trash2,
   TriangleAlert,
   UserRound,
-  Wand2,
   type LucideIcon,
 } from 'lucide-react';
 import { showToast } from '@/lib/toast';
@@ -137,7 +136,7 @@ export default function SettingsPage() {
     const updated = await response.json();
     setSettings(updated);
     setApiKeyInput('');
-    showToast(updated.hasApiKey ? 'Ключ збережено. AI-аналіз увімкнено.' : 'Ключ порожній.');
+    showToast(updated.hasApiKey ? 'Ключ збережено. Розширений аналіз увімкнено.' : 'Ключ порожній.');
   }
 
   async function clearApiKey() {
@@ -198,7 +197,7 @@ export default function SettingsPage() {
         <div>
           <h1 className="m-0 text-[22px]">Налаштування</h1>
           <p className="mt-1 max-w-2xl text-sm text-text-muted">
-            Керуйте цілями, AI-аналізом, даними та акаунтом з одного місця.
+            Керуйте цілями, аналізом, даними та акаунтом з одного місця.
           </p>
         </div>
         <button
@@ -303,18 +302,18 @@ export default function SettingsPage() {
         </div>
       </SettingsSection>
 
-      <SettingsSection icon={Wand2} title="AI-аналіз" description="Поради можуть працювати локально або через ваш Anthropic API ключ.">
+      <SettingsSection icon={ShieldCheck} title="Аналіз порад" description="Поради можуть працювати локально або через ваш приватний ключ розширеного аналізу.">
         <div className="mb-3 rounded-xl border border-border bg-bg-elevated p-3 text-xs text-text-muted">
           <div className="flex items-center gap-2 font-semibold text-text">
             <ShieldCheck size={14} className="text-accent" />
-            Поточний стан: {settings.hasApiKey ? <span className="text-accent-strong">AI-ключ налаштовано</span> : <span>локальний аналіз без ключа</span>}
+            Поточний стан: {settings.hasApiKey ? <span className="text-accent-strong">ключ налаштовано</span> : <span>локальний аналіз без ключа</span>}
           </div>
           <p className="mt-1 leading-5">
             Ключ зберігається на сервері та не показується у браузері. Якщо ключ не задано, застосунок використовує вбудовані правила і тренди.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
-          <Field label="Anthropic API ключ">
+          <Field label="Ключ розширеного аналізу">
             <input type="password" placeholder="sk-ant-..." value={apiKeyInput} onChange={(e) => setApiKeyInput(e.target.value)} className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text" />
           </Field>
           <button onClick={saveApiKey} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-accent-strong px-4 py-2 text-[13px] font-semibold text-[#06281c]">
