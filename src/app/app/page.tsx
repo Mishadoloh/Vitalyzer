@@ -15,6 +15,8 @@ import {
   Settings,
   Smile,
   Sparkles,
+  Target,
+  Trash2,
   TrendingDown,
   TrendingUp,
   UploadCloud,
@@ -57,6 +59,13 @@ interface MoodRow {
   mood: number;
   energy: number;
   stress?: number | null;
+}
+
+interface SmartInsight {
+  title: string;
+  text: string;
+  tone: 'accent' | 'info' | 'warn' | 'danger';
+  href: string;
 }
 
 function todayISO(): string {
@@ -129,10 +138,97 @@ function buildFallbackBalanceScores({
   return { sleep: sleepScore, workouts: workoutScore, nutrition: nutritionScore };
 }
 
+function buildSmartInsights({
+  sleep,
+  workouts,
+  nutrition,
+  weight,
+  mood,
+  settings,
+}: {
+  sleep: SleepRow[];
+  workouts: WorkoutRow[];
+  nutrition: NutritionRow[];
+  weight: WeightRow[];
+  mood: MoodRow[];
+  settings: UserSettings | null;
+}): SmartInsight[] {
+  const insights: SmartInsight[] = [];
+  const recentSleep = recent(sleep);
+  const recentNutrition = recent(nutrition);
+  const recentWeight = recent(weight).sort((a, b) => a.date.localeCompare(b.date));
+  const recentMood = recent(mood);
+  const lastThreeDays = [todayISO(), addDays(todayISO(), -1), addDays(todayISO(), -2)];
+  const sleepByDate = new Map(sleep.map((entry) => [entry.date, entry.hours]));
+
+  if (lastThreeDays.every((date) => {
+    const hours = sleepByDate.get(date);
+    return typeof hours === 'number' && hours < 7;
+  })) {
+    insights.push({
+      title: 'Сон просів',
+      text: 'Сон менше 7 годин три дні поспіль. Сьогодні краще зробити легший вечір і стабільний час відбою.',
+      tone: 'warn',
+      href: '/app/quick-add',
+    });
+  }
+
+  const workoutDates = new Set(workouts.map((entry) => entry.date));
+  const moodAfterWorkouts = recentMood.filter((entry) => workoutDates.has(entry.date));
+  const moodWithoutWorkouts = recentMood.filter((entry) => !workoutDates.has(entry.date));
+  const workoutMoodAvg = average(moodAfterWorkouts.map((entry) => entry.mood));
+  const restMoodAvg = average(moodWithoutWorkouts.map((entry) => entry.mood));
+  if (workoutMoodAvg !== null && restMoodAvg !== null && moodAfterWorkouts.length >= 2 && workoutMoodAvg - restMoodAvg >= 0.6) {
+    insights.push({
+      title: 'Тренування допомагають настрою',
+      text: `У дні з тренуванням середній настрій вищий: ${round(workoutMoodAvg)}/5 проти ${round(restMoodAvg)}/5.`,
+      tone: 'accent',
+      href: '/app/trends',
+    });
+  }
+
+  if (settings && recentNutrition.length >= 3) {
+    const avgProtein = average(recentNutrition.map((entry) => entry.proteinG));
+    const proteinTarget = settings.weightKg * settings.proteinTarget;
+    if (avgProtein !== null && avgProtein < proteinTarget * 0.85) {
+      insights.push({
+        title: 'Білка не вистачає',
+        text: `Середньо ${round(avgProtein, 0)} г білка при цілі близько ${Math.round(proteinTarget)} г. Додайте білковий прийом їжі.`,
+        tone: 'warn',
+        href: '/app/quick-add',
+      });
+    }
+  }
+
+  if (recentWeight.length >= 7) {
+    const delta = recentWeight[recentWeight.length - 1].weightKg - recentWeight[0].weightKg;
+    if (delta <= -1.2) {
+      insights.push({
+        title: 'Вага падає швидко',
+        text: `За останні записи зміна ${round(delta)} кг. Перевірте калорії, білок і відновлення.`,
+        tone: 'danger',
+        href: '/app/trends',
+      });
+    }
+  }
+
+  if (insights.length === 0) {
+    insights.push({
+      title: 'Ритм формується',
+      text: 'Додайте сон, вагу, харчування або тренування сьогодні, і тут з’являться точні персональні висновки.',
+      tone: 'info',
+      href: '/app/quick-add',
+    });
+  }
+
+  return insights.slice(0, 4);
+}
+
 export default function DashboardPage() {
   const [advice, setAdvice] = useState<AdviceResult | null>(null);
   const [loadingAdvice, setLoadingAdvice] = useState(true);
   const [seedingDemo, setSeedingDemo] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [sleep, setSleep] = useState<SleepRow[]>([]);
   const [workouts, setWorkouts] = useState<WorkoutRow[]>([]);
   const [nutrition, setNutrition] = useState<NutritionRow[]>([]);
@@ -213,6 +309,7 @@ export default function DashboardPage() {
   const heroScore = advice?.overallScore ?? (scoreParts.length ? Math.round(average(scoreParts) ?? 0) : null);
   const heroScoreText = heroScore === null ? '-' : String(heroScore);
   const completionPct = Math.round((doneToday / Math.max(1, todayItems.length)) * 100);
+  const smartInsights = buildSmartInsights({ sleep, workouts, nutrition, weight, mood, settings });
 
   useEffect(() => {
     setToday(new Date().toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', weekday: 'long' }));
@@ -259,6 +356,33 @@ export default function DashboardPage() {
       showToast(e instanceof Error ? e.message : String(e), true);
     } finally {
       setSeedingDemo(false);
+    }
+  }
+
+  async function resetAllData() {
+    const ok = window.confirm(
+      'Почати з нуля? Буде видалено всі записи: сон, тренування, харчування, вагу, настрій, поради та налаштування. Дію не можна скасувати.'
+    );
+    if (!ok) return;
+
+    setResetting(true);
+    try {
+      const response = await fetch('/api/wipe', { method: 'POST' });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Не вдалося скинути дані');
+      setAdvice(null);
+      setSleep([]);
+      setWorkouts([]);
+      setNutrition([]);
+      setWeight([]);
+      setMood([]);
+      setSettings(null);
+      showToast('Готово. Дані очищено, можна починати з нуля.');
+      await loadAll(true);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e), true);
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -449,10 +573,18 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="mb-5 grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <DashboardShortcut icon={PlusCircle} title="Операційний дашборд" text="Швидко закрийте сьогоднішній план." href="/app/quick-add" />
         <DashboardShortcut icon={UploadCloud} title="Дашборд даних" text="Імпорт, демо-дані та резервні копії." href="/app/import" />
-        <DashboardShortcut icon={Settings} title="Дашборд цілей" text="Сон, калорії, білок і тренування." href="/app/settings" />
+        <DashboardShortcut icon={Target} title="Дашборд цілей" text="Сон, калорії, білок і тренування." href="/app/goals" />
+        <DashboardAction
+          icon={Trash2}
+          title="Почати з нуля"
+          text="Очистити всі записи й повернути чистий дашборд."
+          onClick={resetAllData}
+          disabled={resetting}
+          danger
+        />
       </div>
 
       {!loadingAdvice && !hasAnyData && (
@@ -485,6 +617,23 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      <div className="mb-4 rounded-2xl border border-border bg-bg-card p-4 shadow-sm shadow-black/10">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-[15px] font-semibold text-text">Розумні висновки</h2>
+            <p className="mt-1 text-xs text-text-muted">Короткі сигнали по даних, які можна одразу перетворити на дію.</p>
+          </div>
+          <Link href="/app/goals" className="rounded-lg border border-border px-3 py-2 text-xs text-text-muted hover:border-accent hover:text-accent">
+            Цілі й прогрес
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
+          {smartInsights.map((insight) => (
+            <SmartInsightCard key={insight.title} insight={insight} />
+          ))}
+        </div>
+      </div>
 
       <AdviceCard advice={advice} loading={loadingAdvice} onRefresh={() => loadAll(true)} />
 
@@ -543,7 +692,7 @@ function MiniDashboard({
   const progress = score === null || score === undefined ? null : clamp(score);
 
   return (
-    <div className="rounded-2xl border border-border bg-bg-card p-4">
+    <div className="rounded-2xl border border-border bg-bg-card p-4 shadow-sm shadow-black/10 transition-colors hover:border-accent/30 hover:bg-bg-elevated">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${toneClass}`}>
@@ -611,6 +760,60 @@ function DashboardShortcut({ icon: Icon, title, text, href }: { icon: LucideIcon
   );
 }
 
+function SmartInsightCard({ insight }: { insight: SmartInsight }) {
+  const toneClass =
+    insight.tone === 'danger'
+      ? 'border-danger/30 bg-danger/10 text-danger'
+      : insight.tone === 'warn'
+        ? 'border-warn/30 bg-warn/10 text-warn'
+        : insight.tone === 'info'
+          ? 'border-info/30 bg-info/10 text-info'
+          : 'border-accent/30 bg-accent/10 text-accent';
+
+  return (
+    <Link href={insight.href} className={`rounded-2xl border p-3.5 transition-colors hover:bg-bg-elevated ${toneClass}`}>
+      <Sparkles size={16} className="mb-2" />
+      <div className="text-sm font-semibold text-text">{insight.title}</div>
+      <p className="mt-1 text-xs leading-5 text-text-muted">{insight.text}</p>
+    </Link>
+  );
+}
+
+function DashboardAction({
+  icon: Icon,
+  title,
+  text,
+  onClick,
+  disabled,
+  danger,
+}: {
+  icon: LucideIcon;
+  title: string;
+  text: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`group rounded-2xl border bg-bg-card p-4 text-left shadow-sm shadow-black/10 transition-colors disabled:opacity-60 ${
+        danger ? 'border-danger/30 hover:border-danger/60' : 'border-border hover:border-accent/40 hover:bg-bg-elevated'
+      }`}
+    >
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${danger ? 'bg-danger/10 text-danger' : 'bg-accent/10 text-accent'}`}>
+          <Icon size={18} />
+        </span>
+        <span className="text-xs text-text-muted opacity-0 transition-opacity group-hover:opacity-100">{disabled ? 'очищення...' : 'скинути'}</span>
+      </div>
+      <div className="text-sm font-semibold text-text">{title}</div>
+      <p className="mt-1 text-xs leading-5 text-text-muted">{text}</p>
+    </button>
+  );
+}
+
 function ChartCard({
   title,
   empty,
@@ -623,11 +826,11 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative min-h-[300px] overflow-hidden rounded-2xl border border-border bg-bg-card p-4 shadow-sm shadow-black/10">
+    <div className="relative min-h-[300px] overflow-hidden rounded-2xl border border-border bg-bg-card p-4 shadow-sm shadow-black/10 transition-colors hover:border-accent/25">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-[13.5px] font-semibold text-text">{title}</h3>
         {empty && (
-          <Link href={actionHref} className="inline-flex items-center gap-1 text-xs text-accent underline">
+          <Link href={actionHref} className="inline-flex items-center gap-1 rounded-lg border border-accent/20 bg-accent/10 px-2 py-1 text-xs text-accent">
             <PlusCircle size={13} />
             додати
           </Link>

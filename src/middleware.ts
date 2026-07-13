@@ -15,6 +15,36 @@ function isWrite(method: string) {
   return method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
 }
 
+function isLocalHost(hostname: string) {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+}
+
+function isAllowedOrigin(req: NextRequest, origin: string | null) {
+  if (!origin) return true;
+
+  try {
+    const originUrl = new URL(origin);
+    const requestHost = req.headers.get('host') || req.nextUrl.host;
+    const requestUrl = new URL(`${req.nextUrl.protocol}//${requestHost}`);
+
+    if (originUrl.host === requestUrl.host && originUrl.protocol === requestUrl.protocol) {
+      return true;
+    }
+
+    const sameLocalPort = isLocalHost(originUrl.hostname) && isLocalHost(requestUrl.hostname) && originUrl.port === requestUrl.port;
+    if (sameLocalPort) return true;
+
+    const configuredUrl = process.env.NEXTAUTH_URL;
+    if (configuredUrl && originUrl.origin === new URL(configuredUrl).origin) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+}
+
 function hitLimit(key: string, limit: number) {
   const now = Date.now();
   const bucket = buckets.get(key);
@@ -37,8 +67,7 @@ export function middleware(req: NextRequest) {
   }
 
   if (isWrite(req.method) && req.nextUrl.pathname !== '/api/stripe/webhook') {
-    const origin = req.headers.get('origin');
-    if (origin && origin !== req.nextUrl.origin) {
+    if (!isAllowedOrigin(req, req.headers.get('origin'))) {
       return NextResponse.json({ error: 'Запит із цього джерела заборонено.' }, { status: 403 });
     }
   }

@@ -16,6 +16,11 @@ export async function PUT(req: NextRequest) {
   const auth = await requireSubscribedUser();
   if (auth.error) return auth.error;
   const body = await req.json();
+  const emailDigestAddress = typeof body.emailDigestAddress === 'string' ? body.emailDigestAddress.trim().toLowerCase() : '';
+  const emailDigestEnabled = Boolean(body.emailDigestEnabled);
+  if (emailDigestEnabled && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailDigestAddress)) {
+    return NextResponse.json({ error: 'Вкажіть коректну email-адресу для розсилки' }, { status: 400 });
+  }
   await getOrCreateSettingsRow(auth.userId);
   await prisma.settings.update({
     where: { userId: auth.userId },
@@ -26,6 +31,9 @@ export async function PUT(req: NextRequest) {
       calTarget: Number(body.calTarget) || 2200,
       proteinTarget: Number(body.proteinTarget) || 1.8,
       workoutsTarget: parseInt(body.workoutsTarget, 10) || 3,
+      emailDigestEnabled,
+      emailDigestAddress: emailDigestAddress || null,
+      emailDigestFrequency: body.emailDigestFrequency === 'daily' ? 'daily' : 'weekly',
     },
   });
   const settings = await getSettingsForClient(auth.userId);

@@ -170,6 +170,10 @@ model Settings {
   workoutsTarget  Int     @default(4)
   anthropicApiKey String? // optional — overrides ANTHROPIC_API_KEY env var if set
   aiModel         String? // optional — defaults to claude-sonnet-4-5 in code
+  emailDigestEnabled Boolean @default(false)
+  emailDigestAddress String?
+  emailDigestFrequency String @default("weekly") // daily | weekly
+  emailDigestLastSentAt DateTime?
 }
 
 // One cached advice entry per user per day so the dashboard doesn't regenerate on every load.

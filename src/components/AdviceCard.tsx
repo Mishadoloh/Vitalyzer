@@ -1,6 +1,6 @@
 'use client';
 
-import { RefreshCw, Sparkles } from 'lucide-react';
+import { CheckCircle2, RefreshCw, Sparkles } from 'lucide-react';
 import type { AdviceResult } from '@/lib/types';
 
 export default function AdviceCard({
@@ -13,23 +13,26 @@ export default function AdviceCard({
   onRefresh: () => void;
 }) {
   return (
-    <div className="mb-5 rounded-2xl border border-border bg-bg-card p-5 shadow-sm shadow-black/10">
-      <div className="flex items-center justify-between gap-3">
+    <div className="mb-5 overflow-hidden rounded-3xl border border-border bg-[linear-gradient(135deg,rgba(27,31,42,0.98),rgba(20,24,33,0.98))] shadow-xl shadow-black/20">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-4 sm:px-5">
         <h2 className="m-0 flex items-center gap-2 text-base font-semibold text-text">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 text-accent">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/10 text-accent">
             <Sparkles size={16} />
           </span>
-          Порада на сьогодні
+          <span>
+            Порада на сьогодні
+            <span className="mt-0.5 block text-[11px] font-normal text-text-muted">коротко, практично, по ваших даних</span>
+          </span>
         </h2>
         <button
           onClick={onRefresh}
           title="Оновити пораду"
-          className="flex h-[34px] w-[34px] items-center justify-center rounded-lg border border-border text-text-muted hover:border-accent hover:text-accent"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-bg-elevated text-text-muted hover:border-accent hover:text-accent"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
-      <div className="mt-3 text-[14.5px] leading-relaxed">
+      <div className="p-4 text-[14.5px] leading-relaxed sm:p-5">
         {loading && <p className="text-text-muted">Аналізуємо ваші дані...</p>}
         {!loading && (!advice || advice.items.length === 0) && (
           <p className="text-text-muted">
@@ -38,13 +41,16 @@ export default function AdviceCard({
         )}
         {!loading && advice && advice.items.length > 0 && (
           <>
-            <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-2.5 py-1 text-[11px] text-accent">
+            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-2.5 py-1 text-[11px] text-accent">
               <Sparkles size={12} />
               {advice.tag} · {advice.source === 'ai' ? 'Розширений аналіз' : 'Локальний аналіз'}
             </span>
-            <ul className="mt-2 space-y-1.5 pl-5">
+            <ul className="mt-2 space-y-2">
               {advice.items.map((item, index) => (
-                <li key={index}>{item}</li>
+                <li key={index} className="flex gap-2 rounded-2xl border border-border bg-bg-elevated/70 p-3">
+                  <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-accent" />
+                  <span>{item}</span>
+                </li>
               ))}
             </ul>
           </>

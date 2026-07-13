@@ -23,7 +23,7 @@ function SignInContent() {
   const params = useSearchParams();
   const error = params.get('error');
   const callbackUrl = params.get('callbackUrl') || '/billing';
-  const guestCallbackUrl = params.get('callbackUrl') || '/app';
+  const guestCallbackUrl = '/app';
   const message = error ? ERROR_MESSAGES[error] || ERROR_MESSAGES.Default : null;
 
   return (

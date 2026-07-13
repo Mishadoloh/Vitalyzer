@@ -9,8 +9,10 @@ import {
   Download,
   KeyRound,
   LogOut,
+  Mail,
   RotateCcw,
   Save,
+  Send,
   ShieldCheck,
   Sparkles,
   Target,
@@ -29,6 +31,9 @@ const DEFAULTS: Settings = {
   calTarget: 2200,
   proteinTarget: 1.8,
   workoutsTarget: 4,
+  emailDigestEnabled: false,
+  emailDigestAddress: '',
+  emailDigestFrequency: 'weekly',
 };
 
 const GOAL_LABELS: Record<Settings['goal'], string> = {
@@ -90,6 +95,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [seedingDemo, setSeedingDemo] = useState(false);
+  const [wiping, setWiping] = useState(false);
+  const [sendingDigest, setSendingDigest] = useState(false);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -146,6 +153,30 @@ export default function SettingsPage() {
     showToast('Ключ видалено. Використовується локальний аналіз.');
   }
 
+  async function sendTestDigest() {
+    const email = (settings.emailDigestAddress || session?.user?.email || '').trim();
+    if (!email) {
+      showToast('Вкажіть email для розсилки', true);
+      return;
+    }
+    setSendingDigest(true);
+    try {
+      const response = await fetch('/api/email-digest', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Не вдалося сформувати лист');
+      showToast(result.message || 'Тестовий лист готовий');
+      if (!settings.emailDigestAddress) setSettings({ ...settings, emailDigestAddress: email });
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e), true);
+    } finally {
+      setSendingDigest(false);
+    }
+  }
+
   async function seedDemoData() {
     setSeedingDemo(true);
     try {
@@ -161,10 +192,19 @@ export default function SettingsPage() {
   }
 
   async function wipeAll() {
-    if (!confirm('Видалити всі дані застосунку: сон, тренування, харчування, вагу, настрій і налаштування? Дію не можна скасувати.')) return;
-    await fetch('/api/wipe', { method: 'POST' });
-    setSettings(DEFAULTS);
-    showToast('Усі дані видалено');
+    if (!confirm('Почати з нуля? Буде видалено всі записи, поради та налаштування. Дію не можна скасувати.')) return;
+    setWiping(true);
+    try {
+      const response = await fetch('/api/wipe', { method: 'POST' });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Не вдалося очистити дані');
+      setSettings(DEFAULTS);
+      showToast('Дані очищено. Починаємо з чистого дашборда.');
+      window.location.href = '/app';
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : String(e), true);
+      setWiping(false);
+    }
   }
 
   async function openBillingPortal() {
@@ -256,6 +296,67 @@ export default function SettingsPage() {
               Вийти
             </button>
           </div>
+        </div>
+      </SettingsSection>
+
+      <SettingsSection icon={Mail} title="Email-розсилка" description="Отримуйте короткий звіт про сон, активність, харчування, вагу й настрій прямо на пошту.">
+        <div className="mb-4 rounded-xl border border-border bg-bg-elevated p-3 text-xs leading-5 text-text-muted">
+          <div className="mb-1 flex items-center gap-2 font-semibold text-text">
+            <Mail size={14} className="text-accent" />
+            {settings.emailDigestEnabled ? 'Розсилку увімкнено' : 'Розсилку вимкнено'}
+          </div>
+          Листи надсилаються тільки після вашого увімкнення. Для реальної відправки на сервері потрібно задати <span className="font-mono text-text">RESEND_API_KEY</span> і <span className="font-mono text-text">EMAIL_FROM</span>.
+        </div>
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_180px_auto] lg:items-end">
+          <Field label="Email для звітів">
+            <input
+              type="email"
+              placeholder={session?.user?.email || 'you@example.com'}
+              value={settings.emailDigestAddress || ''}
+              onChange={(e) => setSettings({ ...settings, emailDigestAddress: e.target.value })}
+              className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text"
+            />
+          </Field>
+          <Field label="Частота">
+            <select
+              value={settings.emailDigestFrequency || 'weekly'}
+              onChange={(e) => setSettings({ ...settings, emailDigestFrequency: e.target.value === 'daily' ? 'daily' : 'weekly' })}
+              className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text"
+            >
+              <option value="weekly">Щотижня</option>
+              <option value="daily">Щодня</option>
+            </select>
+          </Field>
+          <label className="flex min-h-[38px] items-center gap-2 rounded-lg border border-border bg-bg-elevated px-3 py-2 text-[13px] text-text-muted">
+            <input
+              type="checkbox"
+              checked={Boolean(settings.emailDigestEnabled)}
+              onChange={(e) => setSettings({ ...settings, emailDigestEnabled: e.target.checked })}
+              className="h-4 w-4 accent-emerald-400"
+            />
+            Увімкнути
+          </label>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => saveSettings()}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent-strong px-4 py-2 text-[13px] font-semibold text-[#06281c] disabled:opacity-60"
+          >
+            <Save size={14} />
+            Зберегти розсилку
+          </button>
+          <button
+            onClick={sendTestDigest}
+            disabled={sendingDigest}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-[13px] hover:border-accent hover:text-accent disabled:opacity-60"
+          >
+            <Send size={14} />
+            {sendingDigest ? 'Готую лист...' : 'Надіслати тест'}
+          </button>
+          <span className="text-xs text-text-muted">
+            Останній лист: {settings.emailDigestLastSentAt ? new Date(settings.emailDigestLastSentAt).toLocaleString('uk-UA') : 'ще не надсилали'}
+          </span>
         </div>
       </SettingsSection>
 
@@ -358,14 +459,14 @@ export default function SettingsPage() {
       <SettingsSection icon={TriangleAlert} title="Небезпечна зона" description="Дії, які змінюють або видаляють багато даних.">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/30 bg-danger/10 p-4">
           <div>
-            <div className="text-sm font-semibold text-text">Повне очищення застосунку</div>
+            <div className="text-sm font-semibold text-text">Почати з нуля</div>
             <p className="mt-1 text-xs leading-5 text-text-muted">
-              Видаляє всі записи і скидає налаштування. Перед цим краще завантажити резервну копію.
+              Видаляє всі записи, поради й налаштування. Перед цим краще завантажити резервну копію.
             </p>
           </div>
-          <button onClick={wipeAll} className="inline-flex items-center gap-1.5 rounded-lg border border-danger/40 px-4 py-2 text-[13px] text-danger">
+          <button onClick={wipeAll} disabled={wiping} className="inline-flex items-center gap-1.5 rounded-lg border border-danger/40 px-4 py-2 text-[13px] text-danger disabled:opacity-60">
             <Trash2 size={14} />
-            Видалити все
+            {wiping ? 'Очищення...' : 'Почати з нуля'}
           </button>
         </div>
       </SettingsSection>

@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { UserRound } from 'lucide-react';
+import { Loader2, UserRound } from 'lucide-react';
+import { showToast } from '@/lib/toast';
 
 export default function GuestSignInButton({
   callbackUrl = '/app',
@@ -10,16 +12,33 @@ export default function GuestSignInButton({
   callbackUrl?: string;
   className?: string;
 }) {
+  const [loading, setLoading] = useState(false);
+
+  async function continueAsGuest() {
+    setLoading(true);
+    try {
+      const result = await signIn('guest', { callbackUrl, redirect: false });
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+      window.location.href = result?.url || callbackUrl;
+    } catch (e) {
+      showToast('Не вдалося відкрити гостьовий режим: ' + (e instanceof Error ? e.message : String(e)), true);
+      setLoading(false);
+    }
+  }
+
   return (
     <button
-      onClick={() => signIn('guest', { callbackUrl })}
+      onClick={continueAsGuest}
+      disabled={loading}
       className={
         className ??
-        'inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border px-6 py-3 text-[15px] text-text-muted hover:border-accent hover:text-text'
+        'inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border px-6 py-3 text-[15px] text-text-muted hover:border-accent hover:text-text disabled:opacity-60'
       }
     >
-      <UserRound size={16} />
-      Продовжити як гість
+      {loading ? <Loader2 size={16} className="animate-spin" /> : <UserRound size={16} />}
+      {loading ? 'Відкриваємо...' : 'Продовжити як гість'}
     </button>
   );
 }

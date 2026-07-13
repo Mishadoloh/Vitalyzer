@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
+  Activity,
   Dumbbell,
   History,
   LayoutDashboard,
@@ -11,6 +12,8 @@ import {
   Moon,
   PlusCircle,
   Settings as SettingsIcon,
+  ShieldCheck,
+  Target,
   TrendingUp,
   UploadCloud,
   Utensils,
@@ -21,6 +24,7 @@ const NAV = [
   { href: '/app', label: 'Дашборд', icon: LayoutDashboard },
   { href: '/app/quick-add', label: 'Швидкий запис', icon: PlusCircle },
   { href: '/app/import', label: 'Імпорт даних', icon: UploadCloud },
+  { href: '/app/goals', label: 'Цілі', icon: Target },
   { href: '/app/trends', label: 'Тренди', icon: TrendingUp },
   { href: '/app/history', label: 'Історія', icon: History },
   { href: '/app/settings', label: 'Налаштування', icon: SettingsIcon },
@@ -38,6 +42,7 @@ export default function Sidebar() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
+      if (document.visibilityState === 'hidden') return;
       try {
         const [sleep, workouts, nutrition] = await Promise.all([
           fetch('/api/sleep').then((response) => response.json()),
@@ -52,18 +57,20 @@ export default function Sidebar() {
       }
     }
     load();
-    const interval = setInterval(load, 5000);
+    const interval = setInterval(load, 30000);
+    document.addEventListener('visibilitychange', load);
     return () => {
       cancelled = true;
       clearInterval(interval);
+      document.removeEventListener('visibilitychange', load);
     };
   }, [pathname]);
 
   return (
     <>
-      <header className="flex items-center justify-between border-b border-border bg-bg-elevated px-4 py-3 md:hidden">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-bg-elevated/95 px-4 py-3 backdrop-blur md:hidden">
         <div className="flex items-center gap-2 text-lg font-bold">
-          <span className="text-accent">◆</span>
+          <span className="grid h-7 w-7 place-items-center rounded-lg bg-accent/10 text-accent">◆</span>
           <span>Vitalyzer</span>
         </div>
         <button
@@ -82,9 +89,15 @@ export default function Sidebar() {
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex items-center gap-2 px-2 pb-6 pt-1.5 text-lg font-bold">
-          <span className="text-accent">◆</span>
-          <span>Vitalyzer</span>
+        <div className="mb-5 rounded-2xl border border-border bg-bg-card p-3">
+          <div className="flex items-center gap-2 text-lg font-bold">
+            <span className="grid h-8 w-8 place-items-center rounded-xl bg-accent/10 text-accent">◆</span>
+            <span>Vitalyzer</span>
+          </div>
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-2.5 py-1 text-[11px] text-accent">
+            <ShieldCheck size={12} />
+            приватний дашборд
+          </div>
         </div>
         <nav className="flex flex-1 flex-col gap-1">
           {NAV.map((item) => {
@@ -93,32 +106,63 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-sm transition-colors ${
-                  active ? 'bg-accent/10 font-semibold text-accent' : 'text-text-muted hover:bg-bg-card hover:text-text'
+                className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                  active ? 'border border-accent/20 bg-accent/10 font-semibold text-accent shadow-sm shadow-black/15' : 'border border-transparent text-text-muted hover:border-border hover:bg-bg-card hover:text-text'
                 }`}
               >
-                {active && <span className="absolute left-0 top-1.5 h-[calc(100%-12px)] w-[3px] rounded-full bg-accent" />}
+                {active && <span className="absolute left-1 top-2 h-[calc(100%-16px)] w-[3px] rounded-full bg-accent" />}
                 <item.icon size={16} className="shrink-0" />
                 {item.label}
               </Link>
             );
           })}
         </nav>
-        <div className="flex flex-col gap-2 border-t border-border pt-4 text-xs text-text-muted">
-          <div className="flex items-center gap-2">
-            <Moon size={13} className="text-accent" />
-            <b className="text-text">{counts ? counts.sleep : '-'}</b> записів сну
+        <div className="rounded-2xl border border-border bg-bg-card p-3 text-xs text-text-muted">
+          <div className="mb-3 flex items-center gap-2 font-semibold text-text">
+            <Activity size={13} className="text-accent" />
+            Дані зараз
           </div>
-          <div className="flex items-center gap-2">
-            <Dumbbell size={13} className="text-info" />
-            <b className="text-text">{counts ? counts.workouts : '-'}</b> тренувань
+          <div className="flex items-center justify-between gap-2 border-t border-border py-2">
+            <span className="flex items-center gap-2">
+              <Moon size={13} className="text-accent" />
+              Сон
+            </span>
+            <b className="text-text">{counts ? counts.sleep : '-'}</b>
           </div>
-          <div className="flex items-center gap-2">
-            <Utensils size={13} className="text-warn" />
-            <b className="text-text">{counts ? counts.nutrition : '-'}</b> днів харчування
+          <div className="flex items-center justify-between gap-2 border-t border-border py-2">
+            <span className="flex items-center gap-2">
+              <Dumbbell size={13} className="text-info" />
+              Тренування
+            </span>
+            <b className="text-text">{counts ? counts.workouts : '-'}</b>
+          </div>
+          <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
+            <span className="flex items-center gap-2">
+              <Utensils size={13} className="text-warn" />
+              Харчування
+            </span>
+            <b className="text-text">{counts ? counts.nutrition : '-'}</b>
           </div>
         </div>
       </aside>
+
+      <nav className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-5 gap-1 rounded-2xl border border-border bg-bg-elevated/95 p-1 shadow-2xl shadow-black/35 backdrop-blur md:hidden">
+        {NAV.slice(0, 5).map((item) => {
+          const active = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 text-[10.5px] transition-colors ${
+                active ? 'bg-accent/10 text-accent' : 'text-text-muted hover:bg-bg-card hover:text-text'
+              }`}
+            >
+              <item.icon size={17} />
+              <span className="max-w-full truncate">{item.label.replace(' даних', '')}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </>
   );
 }

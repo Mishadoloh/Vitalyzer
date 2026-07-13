@@ -23,7 +23,6 @@ import TiltCard from '@/components/TiltCard';
 import Reveal from '@/components/Reveal';
 import AnimatedStat from '@/components/AnimatedStat';
 import FaqAccordion from '@/components/FaqAccordion';
-import CtaData3DLoader from '@/components/CtaData3DLoader';
 
 const FEATURES = [
   {
@@ -338,24 +337,6 @@ export default async function LandingPage() {
             <FaqAccordion items={FAQ} />
           </Reveal>
         </div>
-      </section>
-
-      <section className="relative px-5 py-12 sm:py-14">
-        <Reveal>
-          <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-7 overflow-hidden border-y border-border/70 py-9 text-center sm:grid-cols-[minmax(0,1fr)_390px_auto] sm:text-left">
-            <div>
-              <h2 className="m-0 text-xl font-semibold sm:text-2xl">Перевірте на власних даних за кілька хвилин</h2>
-              <p className="mt-2 max-w-xl text-[14px] text-text-muted">
-                Відкрийте гостьовий режим, внесіть перший запис або імпортуйте файл і подивіться, яку пораду дасть рушій.
-              </p>
-            </div>
-            <CtaData3DLoader className="pointer-events-none mx-auto -my-3 h-[260px] w-full max-w-[420px] opacity-100 sm:h-[220px] sm:max-w-none" />
-            <GuestSignInButton
-              callbackUrl="/app"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent-strong px-6 py-3 text-[15px] font-semibold text-[#06281c] hover:opacity-90 sm:w-auto"
-            />
-          </div>
-        </Reveal>
       </section>
 
       <footer className="relative border-t border-border/60 bg-bg-elevated/35 px-5 py-10 text-text-muted">

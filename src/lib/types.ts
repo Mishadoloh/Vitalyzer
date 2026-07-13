@@ -74,6 +74,10 @@ export interface Settings {
   anthropicApiKey?: string | null;
   aiModel?: string | null;
   hasApiKey?: boolean; // derived, true if a key is configured server-side (env or DB)
+  emailDigestEnabled?: boolean;
+  emailDigestAddress?: string | null;
+  emailDigestFrequency?: 'daily' | 'weekly';
+  emailDigestLastSentAt?: string | null;
 }
 
 export interface SleepStats {

@@ -8,6 +8,8 @@ const DEFAULTS = {
   calTarget: 2200,
   proteinTarget: 1.8,
   workoutsTarget: 4,
+  emailDigestEnabled: false,
+  emailDigestFrequency: 'weekly',
 };
 
 // One settings row per user. Created lazily on first read.
@@ -29,6 +31,10 @@ export async function getSettingsForClient(userId: string): Promise<Settings> {
     workoutsTarget: row.workoutsTarget,
     aiModel: row.aiModel,
     hasApiKey,
+    emailDigestEnabled: row.emailDigestEnabled,
+    emailDigestAddress: row.emailDigestAddress,
+    emailDigestFrequency: row.emailDigestFrequency === 'daily' ? 'daily' : 'weekly',
+    emailDigestLastSentAt: row.emailDigestLastSentAt?.toISOString() ?? null,
   };
 }
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Activity, Dumbbell, Moon, Save, Scale, Smile, Utensils, type LucideIcon } from 'lucide-react';
+import { Activity, ArrowRight, CalendarDays, Dumbbell, Moon, Save, Scale, Smile, Utensils, type LucideIcon } from 'lucide-react';
 import { showToast } from '@/lib/toast';
 import type { EntryType } from '@/lib/types';
 
@@ -18,6 +18,12 @@ const inputCls = 'rounded-xl border border-border bg-bg-elevated px-3 py-3 text-
 
 function todayISO(): string {
   const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function addDays(iso: string, delta: number): string {
+  const date = new Date(`${iso}T12:00:00`);
+  date.setDate(date.getDate() + delta);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
@@ -56,7 +62,7 @@ export default function QuickAddPage() {
   const activeTab = TABS.find((item) => item.key === tab) || TABS[0];
   const ActiveIcon = activeTab.icon;
 
-  async function submit() {
+  async function submit(redirectToDashboard: boolean) {
     let record: Record<string, unknown>;
 
     if (tab === 'sleep') {
@@ -88,7 +94,9 @@ export default function QuickAddPage() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Помилка збереження');
       showToast(`Збережено: ${activeTab.label} за ${date}`);
-      router.push('/app');
+      if (redirectToDashboard) {
+        router.push('/app');
+      }
     } catch (e) {
       showToast('Не вдалося зберегти запис: ' + (e instanceof Error ? e.message : String(e)), true);
     } finally {
@@ -98,12 +106,31 @@ export default function QuickAddPage() {
 
   return (
     <section className="pb-8">
-      <header className="mb-4 rounded-2xl border border-border bg-bg-card p-4">
-        <p className="mb-1 text-xs font-medium text-accent">Запис вручну</p>
-        <h1 className="m-0 text-[22px] text-text">Швидкий запис</h1>
-        <p className="mt-1 max-w-2xl text-sm leading-6 text-text-muted">
-          Додайте сьогоднішні показники без імпорту файлів. Повторний запис за ту саму дату оновить день, а тренування додасться окремим рядком.
-        </p>
+      <header className="mb-5 overflow-hidden rounded-3xl border border-border bg-[linear-gradient(135deg,rgba(27,31,42,0.98),rgba(14,18,23,0.98))] shadow-xl shadow-black/20">
+        <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div>
+            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[12px] text-accent">
+              <Save size={13} />
+              запис вручну
+            </span>
+            <h1 className="m-0 text-2xl font-bold text-text">Швидкий запис</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
+              Додайте сьогоднішні показники без імпорту файлів. Повторний запис за ту саму дату оновить день, а тренування додасться окремим рядком.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-bg/30 p-3 sm:min-w-[240px]">
+            <div className="flex items-center gap-2 text-xs text-text-muted">
+              <CalendarDays size={14} className="text-accent" />
+              Поточна дата
+            </div>
+            <div className="mt-1 text-lg font-bold text-text">{date}</div>
+            <div className="mt-3 flex gap-2">
+              <Chip onClick={() => setDate(todayISO())}>сьогодні</Chip>
+              <Chip onClick={() => setDate(addDays(date, -1))}>-1 день</Chip>
+              <Chip onClick={() => setDate(addDays(date, 1))}>+1 день</Chip>
+            </div>
+          </div>
+        </div>
       </header>
 
       <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-5">
@@ -127,7 +154,7 @@ export default function QuickAddPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,680px)_1fr]">
-        <div className="rounded-2xl border border-border bg-bg-card p-4 sm:p-5">
+        <div className="rounded-3xl border border-border bg-bg-card p-4 shadow-xl shadow-black/10 sm:p-5">
           <div className="mb-4 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
               <ActiveIcon size={18} />
@@ -229,17 +256,27 @@ export default function QuickAddPage() {
             )}
           </div>
 
-          <button
-            onClick={submit}
-            disabled={saving}
-            className="mt-5 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-accent-strong px-4 py-3 text-sm font-semibold text-[#06281c] disabled:opacity-50"
-          >
-            <Save size={16} />
-            {saving ? 'Збереження...' : 'Зберегти запис'}
-          </button>
+          <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button
+              onClick={() => submit(false)}
+              disabled={saving}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm font-semibold text-accent disabled:opacity-50"
+            >
+              <Save size={16} />
+              {saving ? 'Збереження...' : 'Зберегти і додати ще'}
+            </button>
+            <button
+              onClick={() => submit(true)}
+              disabled={saving}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-accent-strong px-4 py-3 text-sm font-semibold text-[#06281c] disabled:opacity-50"
+            >
+              <ArrowRight size={16} />
+              {saving ? 'Збереження...' : 'Зберегти і на дашборд'}
+            </button>
+          </div>
         </div>
 
-        <aside className="rounded-2xl border border-border bg-bg-card p-4">
+        <aside className="rounded-3xl border border-border bg-bg-card p-4 shadow-xl shadow-black/10">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-text">
             <Activity size={15} className="text-accent" />
             Швидкі пресети
@@ -283,6 +320,16 @@ export default function QuickAddPage() {
           <p className="mt-4 text-xs leading-5 text-text-muted">
             Пресети лише заповнюють поля. Перед збереженням можна змінити будь-яке значення вручну.
           </p>
+          <div className="mt-4 rounded-2xl border border-border bg-bg-elevated p-3">
+            <div className="text-xs text-text-muted">Поточний розділ</div>
+            <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-text">
+              <ActiveIcon size={15} className="text-accent" />
+              {activeTab.label}
+            </div>
+            <div className="mt-2 text-xs leading-5 text-text-muted">
+              Після збереження можна залишитись тут і швидко додати наступний тип даних.
+            </div>
+          </div>
         </aside>
       </div>
     </section>

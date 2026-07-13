@@ -31,10 +31,12 @@ export default function ScoreRow({ advice }: { advice: AdviceResult }) {
   return (
     <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
       {items.map((item) => (
-        <div key={item.label} className="rounded-2xl border border-border bg-bg-card px-4 py-3.5 transition-colors hover:border-accent/30">
-          <div className="mb-1.5 flex items-center gap-1.5 text-xs text-text-muted">
-            <item.icon size={13} className="shrink-0 opacity-70" />
-            <span>{item.label}</span>
+        <div key={item.label} className="rounded-2xl border border-border bg-bg-card px-4 py-3.5 shadow-sm shadow-black/10 transition-colors hover:border-accent/30 hover:bg-bg-elevated">
+          <div className="mb-2 flex items-center gap-2 text-xs text-text-muted">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5">
+              <item.icon size={13} className="shrink-0 opacity-80" />
+            </span>
+            <span className="leading-tight">{item.label}</span>
           </div>
           <div className={`text-2xl font-bold ${item.cls}`}>{item.value}</div>
         </div>
