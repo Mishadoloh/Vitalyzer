@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Vitalyzer">
+  <rect width="512" height="512" rx="112" fill="#0f1115"/>
+  <circle cx="256" cy="256" r="164" fill="#16231f"/>
+  <path d="M256 96 416 256 256 416 96 256Z" fill="#34d399"/>
+  <path d="M256 148 364 256 256 364 148 256Z" fill="#0f1115"/>
+  <path d="M204 192h42l33 112 42-112h40l-62 152h-43z" fill="#e8fff6"/>
+  <circle cx="178" cy="178" r="18" fill="#79e7c6"/>
+  <circle cx="362" cy="336" r="20" fill="#60a5fa"/>
+  <path d="M128 318c56 28 111 31 166 9 37-15 68-41 92-78" fill="none" stroke="#e8fff6" stroke-width="13" stroke-linecap="round" opacity=".72"/>
+</svg>

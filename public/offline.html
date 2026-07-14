@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Vitalyzer offline</title>
+    <meta name="theme-color" content="#0f1115" />
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #0f1115;
+        color: #e8eaf0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        padding: 24px;
+      }
+      main {
+        width: min(440px, 100%);
+        border: 1px solid #2a3140;
+        border-radius: 24px;
+        background: #1b1f2a;
+        padding: 24px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, .28);
+      }
+      .mark {
+        width: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        border-radius: 14px;
+        background: rgba(52, 211, 153, .12);
+        color: #34d399;
+        margin-bottom: 18px;
+      }
+      h1 { margin: 0; font-size: 24px; line-height: 1.2; }
+      p { color: #9aa4b5; line-height: 1.6; margin: 12px 0 0; }
+      a {
+        display: inline-flex;
+        margin-top: 20px;
+        border-radius: 12px;
+        background: #34d399;
+        color: #06281c;
+        font-weight: 700;
+        text-decoration: none;
+        padding: 12px 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark">◆</div>
+      <h1>Немає з'єднання</h1>
+      <p>Vitalyzer не може завантажити свіжі дані. Перевірте інтернет і відкрийте застосунок ще раз.</p>
+      <a href="/app">Спробувати знову</a>
+    </main>
+  </body>
+</html>
