@@ -14,6 +14,7 @@ import {
   Save,
   Send,
   ShieldCheck,
+  Smartphone,
   Sparkles,
   Target,
   Trash2,
@@ -23,6 +24,11 @@ import {
 } from 'lucide-react';
 import { showToast } from '@/lib/toast';
 import type { Settings } from '@/lib/types';
+
+type InstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+};
 
 const DEFAULTS: Settings = {
   weightKg: 70,
@@ -97,6 +103,8 @@ export default function SettingsPage() {
   const [seedingDemo, setSeedingDemo] = useState(false);
   const [wiping, setWiping] = useState(false);
   const [sendingDigest, setSendingDigest] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -104,6 +112,25 @@ export default function SettingsPage() {
       .then((nextSettings) => setSettings(nextSettings))
       .catch(() => showToast('Не вдалося завантажити налаштування', true))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const win = window as Window & { __vitalyzerInstallPrompt?: InstallPromptEvent; navigator?: Navigator & { standalone?: boolean } };
+    const detectStandalone = () => window.matchMedia('(display-mode: standalone)').matches || Boolean(win.navigator?.standalone);
+    const refreshInstallState = () => {
+      setInstallPrompt(win.__vitalyzerInstallPrompt ?? null);
+      setIsStandalone(detectStandalone());
+    };
+
+    refreshInstallState();
+    window.addEventListener('vitalyzer:pwa-ready', refreshInstallState);
+    window.addEventListener('vitalyzer:pwa-installed', refreshInstallState);
+    window.matchMedia('(display-mode: standalone)').addEventListener('change', refreshInstallState);
+    return () => {
+      window.removeEventListener('vitalyzer:pwa-ready', refreshInstallState);
+      window.removeEventListener('vitalyzer:pwa-installed', refreshInstallState);
+      window.matchMedia('(display-mode: standalone)').removeEventListener('change', refreshInstallState);
+    };
   }, []);
 
   const dailyProtein = useMemo(() => Math.round((settings.weightKg || 0) * (settings.proteinTarget || 0)), [settings.proteinTarget, settings.weightKg]);
@@ -220,6 +247,26 @@ export default function SettingsPage() {
     }
   }
 
+  async function installApp() {
+    if (isStandalone) {
+      showToast('Vitalyzer вже відкритий як встановлений застосунок.');
+      return;
+    }
+    if (!installPrompt) {
+      showToast('Якщо кнопка недоступна, відкрийте меню браузера і виберіть “Встановити застосунок” або “Додати на головний екран”.');
+      return;
+    }
+
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    setInstallPrompt(null);
+    if (choice.outcome === 'accepted') {
+      showToast('Vitalyzer встановлено на пристрій.');
+    } else {
+      showToast('Встановлення скасовано.');
+    }
+  }
+
   if (loading) {
     return (
       <section>
@@ -296,6 +343,27 @@ export default function SettingsPage() {
               Вийти
             </button>
           </div>
+        </div>
+      </SettingsSection>
+
+      <SettingsSection icon={Smartphone} title="Застосунок на телефоні" description="Встановіть Vitalyzer на головний екран і відкривайте його як окремий мобільний застосунок.">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="rounded-xl border border-border bg-bg-elevated p-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-text">
+              <Smartphone size={15} className="text-accent" />
+              {isStandalone ? 'Встановлено' : installPrompt ? 'Готово до встановлення' : 'Можна додати вручну'}
+            </div>
+            <p className="mt-1 text-xs leading-5 text-text-muted">
+              Після встановлення застосунок відкривається без зайвих вкладок браузера, має свою іконку та offline-екран при поганому інтернеті.
+            </p>
+          </div>
+          <button
+            onClick={installApp}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-accent-strong px-4 py-3 text-[13px] font-semibold text-[#06281c]"
+          >
+            <Download size={14} />
+            {isStandalone ? 'Вже встановлено' : 'Встановити'}
+          </button>
         </div>
       </SettingsSection>
 
