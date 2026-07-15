@@ -168,12 +168,18 @@ model Settings {
   calTarget       Float   @default(2200)
   proteinTarget   Float   @default(1.8)
   workoutsTarget  Int     @default(4)
+  age             Int?
+  heightCm        Float?
+  sex             String  @default("unknown") // unknown | female | male
+  activityLevel   String  @default("moderate") // sedentary | light | moderate | active | athlete
   anthropicApiKey String? // optional — overrides ANTHROPIC_API_KEY env var if set
   aiModel         String? // optional — defaults to claude-sonnet-4-5 in code
   emailDigestEnabled Boolean @default(false)
   emailDigestAddress String?
   emailDigestFrequency String @default("weekly") // daily | weekly
   emailDigestLastSentAt DateTime?
+  backupEmailEnabled Boolean @default(false)
+  backupEmailLastSentAt DateTime?
 }
 
 // One cached advice entry per user per day so the dashboard doesn't regenerate on every load.

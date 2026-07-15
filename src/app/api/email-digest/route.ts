@@ -32,13 +32,18 @@ export async function GET(req: NextRequest) {
   }
 
   const rows = await prisma.settings.findMany({
-    where: { emailDigestEnabled: true, emailDigestAddress: { not: null } },
+    where: {
+      emailDigestAddress: { not: null },
+      OR: [{ emailDigestEnabled: true }, { backupEmailEnabled: true }],
+    },
     select: {
       userId: true,
       emailDigestEnabled: true,
       emailDigestAddress: true,
       emailDigestFrequency: true,
       emailDigestLastSentAt: true,
+      backupEmailEnabled: true,
+      backupEmailLastSentAt: true,
     },
   });
 

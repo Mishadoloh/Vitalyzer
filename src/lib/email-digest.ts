@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
 import { getOrCreateSettingsRow } from './settings';
+import { buildBackupAttachments, getBackupData } from './backup';
 
 type DigestMode = 'sent' | 'preview';
 
@@ -7,6 +8,12 @@ interface DigestResult {
   mode: DigestMode;
   to: string;
   subject: string;
+  backupAttached: boolean;
+}
+
+interface ResendAttachment {
+  filename: string;
+  content: string;
 }
 
 function todayISO(): string {
@@ -116,16 +123,25 @@ export async function buildEmailDigest(userId: string, addressOverride?: string 
 
 export async function sendEmailDigest(userId: string, options: { force?: boolean; addressOverride?: string | null } = {}): Promise<DigestResult> {
   const settings = await getOrCreateSettingsRow(userId);
-  if (!options.force && !settings.emailDigestEnabled) throw new Error('Розсилку вимкнено');
+  if (!options.force && !settings.emailDigestEnabled && !settings.backupEmailEnabled) throw new Error('Розсилку вимкнено');
 
   const message = await buildEmailDigest(userId, options.addressOverride);
+  const backupDue = isBackupDue(settings);
+  const shouldAttachBackup = Boolean(settings.backupEmailEnabled && (options.force || backupDue));
+  const attachments: ResendAttachment[] = shouldAttachBackup ? buildBackupAttachments(await getBackupData(userId)) : [];
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM || 'Vitalyzer <onboarding@resend.dev>';
 
   if (!apiKey) {
-    console.info('[email-preview]', { to: message.to, subject: message.subject, text: message.text });
-    await prisma.settings.update({ where: { userId }, data: { emailDigestLastSentAt: new Date() } });
-    return { mode: 'preview', to: message.to, subject: message.subject };
+    console.info('[email-preview]', { to: message.to, subject: message.subject, text: message.text, attachments: attachments.map((item) => item.filename) });
+    await prisma.settings.update({
+      where: { userId },
+      data: {
+        emailDigestLastSentAt: settings.emailDigestEnabled ? new Date() : settings.emailDigestLastSentAt,
+        backupEmailLastSentAt: shouldAttachBackup ? new Date() : settings.backupEmailLastSentAt,
+      },
+    });
+    return { mode: 'preview', to: message.to, subject: message.subject, backupAttached: shouldAttachBackup };
   }
 
   const response = await fetch('https://api.resend.com/emails', {
@@ -134,7 +150,7 @@ export async function sendEmailDigest(userId: string, options: { force?: boolean
       authorization: `Bearer ${apiKey}`,
       'content-type': 'application/json',
     },
-    body: JSON.stringify({ from, to: message.to, subject: message.subject, text: message.text, html: message.html }),
+    body: JSON.stringify({ from, to: message.to, subject: message.subject, text: message.text, html: message.html, attachments }),
   });
 
   if (!response.ok) {
@@ -142,14 +158,37 @@ export async function sendEmailDigest(userId: string, options: { force?: boolean
     throw new Error(errorText || 'Не вдалося відправити email');
   }
 
-  await prisma.settings.update({ where: { userId }, data: { emailDigestLastSentAt: new Date() } });
-  return { mode: 'sent', to: message.to, subject: message.subject };
+  await prisma.settings.update({
+    where: { userId },
+    data: {
+      emailDigestLastSentAt: settings.emailDigestEnabled ? new Date() : settings.emailDigestLastSentAt,
+      backupEmailLastSentAt: shouldAttachBackup ? new Date() : settings.backupEmailLastSentAt,
+    },
+  });
+  return { mode: 'sent', to: message.to, subject: message.subject, backupAttached: shouldAttachBackup };
 }
 
-export function isEmailDigestDue(settings: { emailDigestEnabled: boolean; emailDigestAddress: string | null; emailDigestFrequency: string; emailDigestLastSentAt: Date | null }): boolean {
+function isDigestDue(settings: { emailDigestEnabled: boolean; emailDigestAddress: string | null; emailDigestFrequency: string; emailDigestLastSentAt: Date | null }): boolean {
   if (!settings.emailDigestEnabled || !settings.emailDigestAddress) return false;
   if (!settings.emailDigestLastSentAt) return true;
   const ageMs = Date.now() - settings.emailDigestLastSentAt.getTime();
   const dayMs = 24 * 60 * 60 * 1000;
   return settings.emailDigestFrequency === 'daily' ? ageMs >= dayMs : ageMs >= dayMs * 7;
+}
+
+function isBackupDue(settings: { backupEmailEnabled: boolean; emailDigestAddress: string | null; backupEmailLastSentAt: Date | null }): boolean {
+  if (!settings.backupEmailEnabled || !settings.emailDigestAddress) return false;
+  if (!settings.backupEmailLastSentAt) return true;
+  return Date.now() - settings.backupEmailLastSentAt.getTime() >= 7 * 24 * 60 * 60 * 1000;
+}
+
+export function isEmailDigestDue(settings: {
+  emailDigestEnabled: boolean;
+  emailDigestAddress: string | null;
+  emailDigestFrequency: string;
+  emailDigestLastSentAt: Date | null;
+  backupEmailEnabled: boolean;
+  backupEmailLastSentAt: Date | null;
+}): boolean {
+  return isDigestDue(settings) || isBackupDue(settings);
 }

@@ -71,6 +71,10 @@ export interface Settings {
   calTarget: number;
   proteinTarget: number;
   workoutsTarget: number;
+  age?: number | null;
+  heightCm?: number | null;
+  sex?: 'unknown' | 'female' | 'male';
+  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'athlete';
   anthropicApiKey?: string | null;
   aiModel?: string | null;
   hasApiKey?: boolean; // derived, true if a key is configured server-side (env or DB)
@@ -78,6 +82,8 @@ export interface Settings {
   emailDigestAddress?: string | null;
   emailDigestFrequency?: 'daily' | 'weekly';
   emailDigestLastSentAt?: string | null;
+  backupEmailEnabled?: boolean;
+  backupEmailLastSentAt?: string | null;
 }
 
 export interface SleepStats {

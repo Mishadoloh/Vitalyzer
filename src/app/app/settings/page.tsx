@@ -37,9 +37,14 @@ const DEFAULTS: Settings = {
   calTarget: 2200,
   proteinTarget: 1.8,
   workoutsTarget: 4,
+  age: null,
+  heightCm: null,
+  sex: 'unknown',
+  activityLevel: 'moderate',
   emailDigestEnabled: false,
   emailDigestAddress: '',
   emailDigestFrequency: 'weekly',
+  backupEmailEnabled: false,
 };
 
 const GOAL_LABELS: Record<Settings['goal'], string> = {
@@ -57,33 +62,68 @@ const EXPORTS = [
   ['mood', 'Настрій'],
 ] as const;
 
-function applyGoalPreset(settings: Settings, goal: Settings['goal']): Settings {
+const SEX_LABELS: Record<NonNullable<Settings['sex']>, string> = {
+  unknown: 'Не вказано',
+  female: 'Жінка',
+  male: 'Чоловік',
+};
+
+const ACTIVITY_LABELS: Record<NonNullable<Settings['activityLevel']>, string> = {
+  sedentary: 'Мало руху',
+  light: 'Легка активність',
+  moderate: 'Середня активність',
+  active: 'Активний режим',
+  athlete: 'Спорт щодня',
+};
+
+const ACTIVITY_FACTORS: Record<NonNullable<Settings['activityLevel']>, number> = {
+  sedentary: 1.2,
+  light: 1.375,
+  moderate: 1.55,
+  active: 1.725,
+  athlete: 1.9,
+};
+
+function estimateProfileTargets(settings: Settings) {
   const weight = settings.weightKg || DEFAULTS.weightKg;
-  const baseCalories = Math.round(weight * 32);
+  const height = settings.heightCm || 175;
+  const age = settings.age || 30;
+  const sexOffset = settings.sex === 'female' ? -161 : settings.sex === 'male' ? 5 : -78;
+  const activity = ACTIVITY_FACTORS[settings.activityLevel || 'moderate'];
+  const bmr = 10 * weight + 6.25 * height - 5 * age + sexOffset;
+  const maintenance = Math.round((bmr * activity) / 10) * 10;
+  const goalMultiplier = settings.goal === 'lose' ? 0.84 : settings.goal === 'gain' ? 1.1 : settings.goal === 'perform' ? 1.06 : 1;
+  const protein = settings.goal === 'lose' ? 2 : settings.goal === 'gain' ? 1.9 : settings.goal === 'perform' ? 1.8 : 1.7;
+
+  return {
+    calTarget: Math.max(1200, Math.round((maintenance * goalMultiplier) / 10) * 10),
+    proteinTarget: protein,
+  };
+}
+
+function applyGoalPreset(settings: Settings, goal: Settings['goal']): Settings {
+  const withGoal = { ...settings, goal };
+  const estimated = estimateProfileTargets(withGoal);
   const presets: Record<Settings['goal'], Partial<Settings>> = {
     lose: {
       goal,
-      calTarget: Math.max(1200, Math.round(baseCalories * 0.84)),
-      proteinTarget: 2,
+      ...estimated,
       workoutsTarget: 4,
       sleepTarget: Math.max(7.5, settings.sleepTarget),
     },
     maintain: {
       goal,
-      calTarget: baseCalories,
-      proteinTarget: 1.7,
+      ...estimated,
       workoutsTarget: 3,
     },
     gain: {
       goal,
-      calTarget: Math.round(baseCalories * 1.12),
-      proteinTarget: 1.9,
+      ...estimated,
       workoutsTarget: 4,
     },
     perform: {
       goal,
-      calTarget: Math.round(baseCalories * 1.08),
-      proteinTarget: 1.8,
+      ...estimated,
       workoutsTarget: 5,
       sleepTarget: Math.max(8, settings.sleepTarget),
     },
@@ -134,6 +174,7 @@ export default function SettingsPage() {
   }, []);
 
   const dailyProtein = useMemo(() => Math.round((settings.weightKg || 0) * (settings.proteinTarget || 0)), [settings.proteinTarget, settings.weightKg]);
+  const profileEstimate = useMemo(() => estimateProfileTargets(settings), [settings]);
   const weeklyWorkoutMinutes = Math.round((settings.workoutsTarget || 0) * 45);
   const targetSummary = [
     { label: 'Вага', value: `${settings.weightKg || '-'} кг` },
@@ -405,6 +446,20 @@ export default function SettingsPage() {
             Увімкнути
           </label>
         </div>
+        <label className="mt-3 flex items-start gap-2 rounded-xl border border-border bg-bg-elevated p-3 text-[13px] text-text-muted">
+          <input
+            type="checkbox"
+            checked={Boolean(settings.backupEmailEnabled)}
+            onChange={(e) => setSettings({ ...settings, backupEmailEnabled: e.target.checked })}
+            className="mt-0.5 h-4 w-4 accent-emerald-400"
+          />
+          <span>
+            <span className="block font-semibold text-text">Додавати безпечний backup раз на тиждень</span>
+            <span className="mt-0.5 block text-xs leading-5">
+              До листа буде вкладено JSON і CSV-файли з вашими записами. Це допоможе відновити дані, якщо акаунт або сесія загубляться.
+            </span>
+          </span>
+        </label>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             onClick={() => saveSettings()}
@@ -424,7 +479,66 @@ export default function SettingsPage() {
           </button>
           <span className="text-xs text-text-muted">
             Останній лист: {settings.emailDigestLastSentAt ? new Date(settings.emailDigestLastSentAt).toLocaleString('uk-UA') : 'ще не надсилали'}
+            {settings.backupEmailLastSentAt ? ` · backup: ${new Date(settings.backupEmailLastSentAt).toLocaleDateString('uk-UA')}` : ''}
           </span>
+        </div>
+      </SettingsSection>
+
+      <SettingsSection icon={UserRound} title="Профіль" description="Вік, зріст, стать і активність допомагають точніше рахувати калорії та білок.">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="Вік">
+            <input
+              type="number"
+              min={10}
+              max={100}
+              value={settings.age ?? ''}
+              onChange={(e) => setSettings({ ...settings, age: e.target.value ? parseInt(e.target.value, 10) : null })}
+              className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text"
+            />
+          </Field>
+          <Field label="Зріст, см">
+            <input
+              type="number"
+              min={100}
+              max={240}
+              value={settings.heightCm ?? ''}
+              onChange={(e) => setSettings({ ...settings, heightCm: e.target.value ? parseFloat(e.target.value) : null })}
+              className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text"
+            />
+          </Field>
+          <Field label="Стать">
+            <select
+              value={settings.sex || 'unknown'}
+              onChange={(e) => setSettings({ ...settings, sex: e.target.value as Settings['sex'] })}
+              className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text"
+            >
+              {(Object.keys(SEX_LABELS) as NonNullable<Settings['sex']>[]).map((sex) => (
+                <option key={sex} value={sex}>{SEX_LABELS[sex]}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Активність">
+            <select
+              value={settings.activityLevel || 'moderate'}
+              onChange={(e) => setSettings({ ...settings, activityLevel: e.target.value as Settings['activityLevel'] })}
+              className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text"
+            >
+              {(Object.keys(ACTIVITY_LABELS) as NonNullable<Settings['activityLevel']>[]).map((level) => (
+                <option key={level} value={level}>{ACTIVITY_LABELS[level]}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/20 bg-accent/10 p-3">
+          <div className="text-xs leading-5 text-text-muted">
+            <span className="font-semibold text-text">Оцінка профілю:</span> {profileEstimate.calTarget} ккал/день і {Math.round((settings.weightKg || DEFAULTS.weightKg) * profileEstimate.proteinTarget)} г білка.
+          </div>
+          <button
+            onClick={() => setSettings({ ...settings, calTarget: profileEstimate.calTarget, proteinTarget: profileEstimate.proteinTarget })}
+            className="rounded-lg border border-accent/30 bg-bg-card px-3 py-2 text-xs font-semibold text-accent hover:border-accent"
+          >
+            Застосувати до цілей
+          </button>
         </div>
       </SettingsSection>
 

@@ -2,22 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireSubscribedUser } from '@/lib/auth-helpers';
 import type { EntryType } from '@/lib/types';
+import { rowsToCsv } from '@/lib/backup';
 
 export const dynamic = 'force-dynamic';
-
-const COLUMNS: Record<EntryType, string[]> = {
-  sleep: ['date', 'hours', 'quality', 'bedtime', 'wakeTime'],
-  workouts: ['date', 'type', 'durationMin', 'calories', 'intensity', 'avgHR', 'distanceKm'],
-  nutrition: ['date', 'calories', 'proteinG', 'carbsG', 'fatG', 'waterMl'],
-  weight: ['date', 'weightKg', 'bodyFatPct'],
-  mood: ['date', 'mood', 'energy', 'stress', 'notes'],
-};
-
-function csvEscape(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  const text = String(value);
-  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
 
 export async function GET(_req: Request, { params }: { params: { type: string } }) {
   const auth = await requireSubscribedUser();
@@ -41,13 +28,7 @@ export async function GET(_req: Request, { params }: { params: { type: string } 
     return NextResponse.json({ error: `Невідомий тип: ${params.type}` }, { status: 400 });
   }
 
-  const columns = COLUMNS[type];
-  const lines = [columns.join(',')];
-  for (const row of rows) {
-    lines.push(columns.map((column) => csvEscape(row[column])).join(','));
-  }
-
-  const csv = `\uFEFF${lines.join('\r\n')}`;
+  const csv = rowsToCsv(type, rows);
 
   return new NextResponse(csv, {
     headers: {

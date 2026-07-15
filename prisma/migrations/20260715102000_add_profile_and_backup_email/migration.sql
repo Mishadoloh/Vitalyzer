@@ -1,0 +1,6 @@
+ALTER TABLE "Settings" ADD COLUMN "age" INTEGER;
+ALTER TABLE "Settings" ADD COLUMN "heightCm" DOUBLE PRECISION;
+ALTER TABLE "Settings" ADD COLUMN "sex" TEXT NOT NULL DEFAULT 'unknown';
+ALTER TABLE "Settings" ADD COLUMN "activityLevel" TEXT NOT NULL DEFAULT 'moderate';
+ALTER TABLE "Settings" ADD COLUMN "backupEmailEnabled" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Settings" ADD COLUMN "backupEmailLastSentAt" TIMESTAMP(3);

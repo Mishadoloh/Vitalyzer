@@ -8,8 +8,11 @@ const DEFAULTS = {
   calTarget: 2200,
   proteinTarget: 1.8,
   workoutsTarget: 4,
+  sex: 'unknown',
+  activityLevel: 'moderate',
   emailDigestEnabled: false,
   emailDigestFrequency: 'weekly',
+  backupEmailEnabled: false,
 };
 
 // One settings row per user. Created lazily on first read.
@@ -29,12 +32,20 @@ export async function getSettingsForClient(userId: string): Promise<Settings> {
     calTarget: row.calTarget,
     proteinTarget: row.proteinTarget,
     workoutsTarget: row.workoutsTarget,
+    age: row.age,
+    heightCm: row.heightCm,
+    sex: row.sex === 'female' || row.sex === 'male' ? row.sex : 'unknown',
+    activityLevel: ['sedentary', 'light', 'moderate', 'active', 'athlete'].includes(row.activityLevel)
+      ? (row.activityLevel as Settings['activityLevel'])
+      : 'moderate',
     aiModel: row.aiModel,
     hasApiKey,
     emailDigestEnabled: row.emailDigestEnabled,
     emailDigestAddress: row.emailDigestAddress,
     emailDigestFrequency: row.emailDigestFrequency === 'daily' ? 'daily' : 'weekly',
     emailDigestLastSentAt: row.emailDigestLastSentAt?.toISOString() ?? null,
+    backupEmailEnabled: row.backupEmailEnabled,
+    backupEmailLastSentAt: row.backupEmailLastSentAt?.toISOString() ?? null,
   };
 }
 
