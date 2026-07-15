@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
 import {
+  Bell,
   CheckCircle2,
+  Clock3,
   CreditCard,
   Database,
   Download,
@@ -84,6 +86,28 @@ const ACTIVITY_FACTORS: Record<NonNullable<Settings['activityLevel']>, number> =
   athlete: 1.9,
 };
 
+interface ReminderSettings {
+  enabled: boolean;
+  sleep: boolean;
+  weight: boolean;
+  evening: boolean;
+  sleepTime: string;
+  weightTime: string;
+  eveningTime: string;
+}
+
+const REMINDER_STORAGE_KEY = 'vitalyzer-reminders-v1';
+
+const DEFAULT_REMINDERS: ReminderSettings = {
+  enabled: false,
+  sleep: true,
+  weight: true,
+  evening: true,
+  sleepTime: '21:30',
+  weightTime: '08:00',
+  eveningTime: '20:30',
+};
+
 function estimateProfileTargets(settings: Settings) {
   const weight = settings.weightKg || DEFAULTS.weightKg;
   const height = settings.heightCm || 175;
@@ -145,6 +169,8 @@ export default function SettingsPage() {
   const [sendingDigest, setSendingDigest] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [reminders, setReminders] = useState<ReminderSettings>(DEFAULT_REMINDERS);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
   useEffect(() => {
     fetch('/api/settings')
@@ -171,6 +197,16 @@ export default function SettingsPage() {
       window.removeEventListener('vitalyzer:pwa-installed', refreshInstallState);
       window.matchMedia('(display-mode: standalone)').removeEventListener('change', refreshInstallState);
     };
+  }, []);
+
+  useEffect(() => {
+    if ('Notification' in window) setNotificationPermission(Notification.permission);
+    try {
+      const raw = window.localStorage.getItem(REMINDER_STORAGE_KEY);
+      if (raw) setReminders({ ...DEFAULT_REMINDERS, ...JSON.parse(raw) });
+    } catch {
+      setReminders(DEFAULT_REMINDERS);
+    }
   }, []);
 
   const dailyProtein = useMemo(() => Math.round((settings.weightKg || 0) * (settings.proteinTarget || 0)), [settings.proteinTarget, settings.weightKg]);
@@ -308,6 +344,34 @@ export default function SettingsPage() {
     }
   }
 
+  function saveReminders(next: ReminderSettings) {
+    setReminders(next);
+    window.localStorage.setItem(REMINDER_STORAGE_KEY, JSON.stringify(next));
+    window.dispatchEvent(new Event('vitalyzer:reminders-updated'));
+  }
+
+  async function enableNotifications() {
+    if (!('Notification' in window)) {
+      showToast('Цей браузер не підтримує push-нагадування', true);
+      return;
+    }
+
+    let permission = Notification.permission;
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
+    }
+    setNotificationPermission(permission);
+
+    if (permission !== 'granted') {
+      saveReminders({ ...reminders, enabled: false });
+      showToast('Дозвіл на notifications не видано. Можна увімкнути його в налаштуваннях браузера.', true);
+      return;
+    }
+
+    saveReminders({ ...reminders, enabled: true });
+    showToast('Push-нагадування увімкнено на цьому пристрої');
+  }
+
   if (loading) {
     return (
       <section>
@@ -406,6 +470,72 @@ export default function SettingsPage() {
             {isStandalone ? 'Вже встановлено' : 'Встановити'}
           </button>
         </div>
+      </SettingsSection>
+
+      <SettingsSection icon={Bell} title="Push-нагадування" description="Локальні нагадування на цьому телефоні: сон, вага і вечірній підсумок.">
+        <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="rounded-xl border border-border bg-bg-elevated p-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-text">
+              <Bell size={15} className="text-accent" />
+              {reminders.enabled && notificationPermission === 'granted' ? 'Нагадування активні' : 'Нагадування вимкнено'}
+            </div>
+            <p className="mt-1 text-xs leading-5 text-text-muted">
+              Працює через браузер або встановлений PWA. Дані зберігаються локально в цьому браузері, без відправки на сервер.
+            </p>
+            <div className="mt-2 text-[11px] text-text-muted">
+              Дозвіл браузера: {notificationPermission === 'granted' ? 'дозволено' : notificationPermission === 'denied' ? 'заблоковано' : 'ще не запитували'}
+            </div>
+          </div>
+          <button
+            onClick={enableNotifications}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-accent-strong px-4 py-3 text-[13px] font-semibold text-[#06281c]"
+          >
+            <Bell size={14} />
+            Увімкнути нагадування
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
+          {[
+            { key: 'sleep', timeKey: 'sleepTime', title: 'Додай сон', description: 'Щовечора нагадує записати години сну.' },
+            { key: 'weight', timeKey: 'weightTime', title: 'Запиши вагу', description: 'Ранковий запис для чесного тренду ваги.' },
+            { key: 'evening', timeKey: 'eveningTime', title: 'Вечірній підсумок', description: 'Настрій, харчування і тренування за день.' },
+          ].map((item) => (
+            <div key={item.key} className="rounded-xl border border-border bg-bg-elevated p-3">
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={Boolean(reminders[item.key as keyof ReminderSettings])}
+                  onChange={(e) => saveReminders({ ...reminders, [item.key]: e.target.checked })}
+                  className="mt-1 h-4 w-4 accent-emerald-400"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-text">{item.title}</span>
+                  <span className="mt-1 block text-xs leading-5 text-text-muted">{item.description}</span>
+                </span>
+              </label>
+              <label className="mt-3 flex items-center gap-2 text-xs text-text-muted">
+                <Clock3 size={14} className="text-accent" />
+                <input
+                  type="time"
+                  value={String(reminders[item.timeKey as keyof ReminderSettings])}
+                  onChange={(e) => saveReminders({ ...reminders, [item.timeKey]: e.target.value })}
+                  className="rounded-lg border border-border bg-bg-card px-2.5 py-2 text-text"
+                />
+              </label>
+            </div>
+          ))}
+        </div>
+
+        <label className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-bg-elevated p-3 text-[13px] text-text-muted">
+          <input
+            type="checkbox"
+            checked={reminders.enabled}
+            onChange={(e) => saveReminders({ ...reminders, enabled: e.target.checked })}
+            className="h-4 w-4 accent-emerald-400"
+          />
+          Увімкнути/вимкнути всі нагадування
+        </label>
       </SettingsSection>
 
       <SettingsSection icon={Mail} title="Email-розсилка" description="Отримуйте короткий звіт про сон, активність, харчування, вагу й настрій прямо на пошту.">

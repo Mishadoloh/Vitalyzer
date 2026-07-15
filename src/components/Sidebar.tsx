@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   Activity,
+  Camera,
   Dumbbell,
   History,
   LayoutDashboard,
@@ -23,6 +24,7 @@ import {
 const NAV = [
   { href: '/app', label: 'Дашборд', icon: LayoutDashboard },
   { href: '/app/quick-add', label: 'Швидкий запис', icon: PlusCircle },
+  { href: '/app/progress-photos', label: 'Фото', icon: Camera },
   { href: '/app/import', label: 'Імпорт даних', icon: UploadCloud },
   { href: '/app/goals', label: 'Цілі', icon: Target },
   { href: '/app/trends', label: 'Тренди', icon: TrendingUp },

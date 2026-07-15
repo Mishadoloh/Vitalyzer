@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import AuthSessionProvider from '@/components/AuthSessionProvider';
 import PwaRegister from '@/components/PwaRegister';
+import ReminderScheduler from '@/components/ReminderScheduler';
 import Toaster from '@/components/Toaster';
 
 export const metadata: Metadata = {
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AuthSessionProvider>{children}</AuthSessionProvider>
         <PwaRegister />
+        <ReminderScheduler />
         <Toaster />
       </body>
     </html>

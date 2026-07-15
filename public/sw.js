@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vitalyzer-shell-v1';
+const CACHE_NAME = 'vitalyzer-shell-v2';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE_URLS = ['/manifest.webmanifest', '/icon.svg', OFFLINE_URL];
 
@@ -35,4 +35,21 @@ self.addEventListener('fetch', (event) => {
   if (PRECACHE_URLS.includes(url.pathname)) {
     event.respondWith(caches.match(request).then((cached) => cached || fetch(request)));
   }
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/app/quick-add';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) {
+          if ('navigate' in client) client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(targetUrl);
+    })
+  );
 });
