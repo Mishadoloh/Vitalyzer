@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, Download, ImagePlus, LockKeyhole, Trash2 } from 'lucide-react';
+import { Camera, Download, ImagePlus, LockKeyhole, MoveHorizontal, Trash2 } from 'lucide-react';
 import { showToast } from '@/lib/toast';
 
 const DB_NAME = 'vitalyzer-progress-photos';
@@ -218,11 +218,17 @@ export default function ProgressPhotosPage() {
 
       {oldest && newest && oldest.id !== newest.id && (
         <section className="mb-4 rounded-3xl border border-border bg-bg-card p-4">
-          <h2 className="mb-3 text-[15px] font-semibold text-text">Порівняння</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <ComparePhoto title="Перше фото" photo={oldest} />
-            <ComparePhoto title="Останнє фото" photo={newest} />
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 className="text-[15px] font-semibold text-text">Порівняння до / після</h2>
+              <p className="mt-1 text-xs leading-5 text-text-muted">Тягніть межу, щоб побачити різницю між першим і останнім фото.</p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[11px] text-accent">
+              <MoveHorizontal size={13} />
+              слайдер
+            </span>
           </div>
+          <BeforeAfterCompare before={oldest} after={newest} />
         </section>
       )}
 
@@ -262,15 +268,77 @@ export default function ProgressPhotosPage() {
   );
 }
 
-function ComparePhoto({ title, photo }: { title: string; photo: PhotoView }) {
+function BeforeAfterCompare({ before, after }: { before: PhotoView; after: PhotoView }) {
+  const [position, setPosition] = useState(50);
+  const deltaWeight = before.weightKg !== null && after.weightKg !== null ? after.weightKg - before.weightKg : null;
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-bg-elevated">
-      <img src={photo.url} alt={title} className="aspect-[4/5] w-full object-cover" />
-      <div className="p-3">
-        <div className="text-xs text-text-muted">{title}</div>
-        <div className="font-semibold text-text">{new Date(photo.date).toLocaleDateString('uk-UA')}</div>
-        <div className="text-xs text-text-muted">{photo.weightKg ? `${photo.weightKg} кг` : 'вага не вказана'}</div>
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-bg-elevated">
+        <div className="relative aspect-[4/5] max-h-[680px] min-h-[360px] w-full select-none overflow-hidden bg-black sm:aspect-[16/10]">
+          <img src={before.url} alt={`До: ${before.date}`} className="absolute inset-0 h-full w-full object-cover" draggable={false} />
+          <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}>
+            <img src={after.url} alt={`Після: ${after.date}`} className="h-full w-full object-cover" draggable={false} />
+          </div>
+          <div className="absolute left-3 top-3 rounded-full bg-black/65 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur">Після</div>
+          <div className="absolute right-3 top-3 rounded-full bg-black/65 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur">До</div>
+          <div className="absolute inset-y-0 w-0.5 bg-white shadow-[0_0_18px_rgba(255,255,255,0.8)]" style={{ left: `${position}%` }} />
+          <div
+            className="absolute top-1/2 grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/70 bg-bg-card/90 text-accent shadow-xl shadow-black/35 backdrop-blur"
+            style={{ left: `${position}%` }}
+          >
+            <MoveHorizontal size={20} />
+          </div>
+          <input
+            type="range"
+            min={5}
+            max={95}
+            value={position}
+            onChange={(event) => setPosition(Number(event.target.value))}
+            aria-label="Межа порівняння до і після"
+            className="absolute inset-x-0 bottom-0 h-full cursor-ew-resize opacity-0"
+          />
+        </div>
+        <div className="border-t border-border p-3">
+          <input
+            type="range"
+            min={5}
+            max={95}
+            value={position}
+            onChange={(event) => setPosition(Number(event.target.value))}
+            aria-label="Позиція слайдера порівняння"
+            className="w-full accent-emerald-400"
+          />
+        </div>
       </div>
+
+      <aside className="rounded-2xl border border-border bg-bg-elevated p-4">
+        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-accent">порівняння</div>
+        <div className="mt-3 space-y-3 text-sm">
+          <PhotoMeta label="До" photo={before} />
+          <PhotoMeta label="Після" photo={after} />
+        </div>
+        <div className="mt-4 rounded-xl border border-border bg-bg-card p-3">
+          <div className="text-xs text-text-muted">Зміна ваги</div>
+          <div className="mt-1 text-xl font-bold text-text">
+            {deltaWeight === null ? '-' : `${deltaWeight > 0 ? '+' : ''}${deltaWeight.toFixed(1)} кг`}
+          </div>
+          <p className="mt-1 text-xs leading-5 text-text-muted">
+            Вага не завжди показує форму, тому фото краще дивитися разом із трендом і самопочуттям.
+          </p>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function PhotoMeta({ label, photo }: { label: string; photo: PhotoView }) {
+  return (
+    <div className="rounded-xl border border-border bg-bg-card p-3">
+      <div className="text-xs text-text-muted">{label}</div>
+      <div className="mt-1 font-semibold text-text">{new Date(photo.date).toLocaleDateString('uk-UA')}</div>
+      <div className="mt-1 text-xs text-text-muted">{photo.weightKg ? `${photo.weightKg} кг` : 'вага не вказана'}</div>
+      {photo.note && <p className="mt-2 text-xs leading-5 text-text-muted">{photo.note}</p>}
     </div>
   );
 }
