@@ -48,7 +48,7 @@ function MiniBar({ label, pct, color }: { label: string; pct: number; color: str
 
 export default function MockDashboardPreview() {
   return (
-    <div className="w-full max-w-sm rounded-2xl border border-border bg-gradient-to-br from-bg-card to-bg-elevated p-5 shadow-2xl shadow-black/40">
+    <div className="w-full rounded-xl border border-border bg-gradient-to-br from-bg-card to-bg-elevated p-5 shadow-2xl shadow-black/40 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
         <span className="rounded-full bg-accent/10 px-2.5 py-1 text-[11px] font-medium text-accent">
           Порада на сьогодні

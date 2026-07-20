@@ -23,16 +23,16 @@ import {
 } from 'lucide-react';
 
 const NAV = [
-  { href: '/app', label: 'Дашборд', icon: LayoutDashboard },
-  { href: '/app/quick-add', label: 'Швидкий запис', icon: PlusCircle },
-  { href: '/app/weekly-report', label: 'Тиждень', icon: CalendarRange },
-  { href: '/app/habits', label: 'Звички', icon: Activity },
-  { href: '/app/progress-photos', label: 'Фото', icon: Camera },
-  { href: '/app/import', label: 'Імпорт даних', icon: UploadCloud },
-  { href: '/app/goals', label: 'Цілі', icon: Target },
-  { href: '/app/trends', label: 'Тренди', icon: TrendingUp },
-  { href: '/app/history', label: 'Історія', icon: History },
-  { href: '/app/settings', label: 'Налаштування', icon: SettingsIcon },
+  { href: '/app', label: 'Дашборд', shortLabel: 'Огляд', icon: LayoutDashboard },
+  { href: '/app/quick-add', label: 'Швидкий запис', shortLabel: 'Додати', icon: PlusCircle },
+  { href: '/app/weekly-report', label: 'Тиждень', shortLabel: 'Тиждень', icon: CalendarRange },
+  { href: '/app/habits', label: 'Звички', shortLabel: 'Звички', icon: Activity },
+  { href: '/app/progress-photos', label: 'Фото', shortLabel: 'Фото', icon: Camera },
+  { href: '/app/import', label: 'Імпорт даних', shortLabel: 'Імпорт', icon: UploadCloud },
+  { href: '/app/goals', label: 'Цілі', shortLabel: 'Цілі', icon: Target },
+  { href: '/app/trends', label: 'Тренди', shortLabel: 'Тренди', icon: TrendingUp },
+  { href: '/app/history', label: 'Історія', shortLabel: 'Історія', icon: History },
+  { href: '/app/settings', label: 'Налаштування', shortLabel: 'Опції', icon: SettingsIcon },
 ];
 
 export default function Sidebar() {
@@ -73,7 +73,7 @@ export default function Sidebar() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-bg-elevated/95 px-4 py-3 backdrop-blur md:hidden">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-bg-elevated/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="flex items-center gap-2 text-lg font-bold">
           <span className="grid h-7 w-7 place-items-center rounded-lg bg-accent/10 text-accent">◆</span>
           <span>Vitalyzer</span>
@@ -87,10 +87,10 @@ export default function Sidebar() {
         </button>
       </header>
 
-      {open && <div className="fixed inset-0 z-40 bg-black/55 md:hidden" onClick={() => setOpen(false)} />}
+      {open && <div className="fixed inset-0 z-40 bg-black/55 lg:hidden" onClick={() => setOpen(false)} />}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[240px] shrink-0 flex-col border-r border-border bg-bg-elevated p-3.5 transition-transform duration-200 md:static md:z-auto md:w-[220px] md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[min(280px,86vw)] shrink-0 flex-col border-r border-border bg-bg-elevated p-3.5 transition-transform duration-200 lg:static lg:z-auto lg:w-[220px] lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -151,7 +151,7 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      <nav className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-5 gap-1 rounded-2xl border border-border bg-bg-elevated/95 p-1 shadow-2xl shadow-black/35 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-30 grid grid-cols-5 gap-1 rounded-2xl border border-border bg-bg-elevated/95 p-1 shadow-2xl shadow-black/35 backdrop-blur lg:hidden">
         {NAV.slice(0, 5).map((item) => {
           const active = pathname === item.href;
           return (
@@ -163,7 +163,7 @@ export default function Sidebar() {
               }`}
             >
               <item.icon size={17} />
-              <span className="max-w-full truncate">{item.label.replace(' даних', '')}</span>
+              <span className="max-w-full truncate">{item.shortLabel ?? item.label}</span>
             </Link>
           );
         })}

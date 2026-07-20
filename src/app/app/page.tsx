@@ -648,7 +648,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
         <ChartCard title="Сон, год (14 днів)" empty={!loadingAdvice && sleep.length === 0} actionHref="/app/quick-add">
           <SleepChart sleepAll={sleep} target={settings?.sleepTarget ?? 8} />
         </ChartCard>

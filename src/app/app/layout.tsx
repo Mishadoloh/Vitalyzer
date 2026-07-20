@@ -16,9 +16,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#11141b_0%,#0f1115_42%,#101319_100%)]">
       <div className="pointer-events-none fixed inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
-      <div className="flex min-h-screen flex-col md:flex-row">
+      <div className="flex min-h-screen flex-col lg:flex-row">
         <Sidebar />
-        <main className="w-full flex-1 px-3 pb-24 pt-4 sm:px-6 sm:py-6 lg:px-8">
+        <main className="min-w-0 w-full flex-1 px-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-4 sm:px-5 sm:pt-5 lg:px-7 lg:pb-7 xl:px-8">
           <div className="mx-auto w-full max-w-[1280px]">{children}</div>
         </main>
       </div>

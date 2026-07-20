@@ -1,4 +1,5 @@
 import {
+  Activity,
   CheckCircle2,
   Clock3,
   Database,
@@ -9,14 +10,15 @@ import {
   ShieldCheck,
   Smartphone,
   UploadCloud,
+  Utensils,
   XCircle,
 } from 'lucide-react';
+import Image from 'next/image';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import LandingCTA from '@/components/LandingCTA';
 import GuestSignInButton from '@/components/GuestSignInButton';
-import Hero3DLoader from '@/components/Hero3DLoader';
 import MockDashboardPreview from '@/components/MockDashboardPreview';
 import TiltCard from '@/components/TiltCard';
 import Reveal from '@/components/Reveal';
@@ -145,67 +147,100 @@ export default async function LandingPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-bg text-text">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="animate-float-slow absolute -top-32 left-1/4 h-[420px] w-[420px] rounded-full bg-accent/10 blur-[120px]" />
-        <div className="animate-float-slower absolute top-64 right-0 h-[360px] w-[360px] rounded-full bg-info/10 blur-[120px]" />
-        <div className="animate-float-slow absolute bottom-0 left-0 h-[300px] w-[300px] rounded-full bg-warn/5 blur-[100px]" />
-      </div>
 
       <header className="sticky top-0 z-20 border-b border-border/60 bg-bg/70 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3.5">
           <div className="flex items-center gap-2 text-lg font-bold">
             <span className="text-accent">◆</span>
             <span>Vitalyzer</span>
           </div>
-          <LandingCTA
-            authState={authState}
-            className="rounded-lg border border-border px-4 py-2 text-sm hover:border-accent hover:text-accent"
-          />
+          <div className="flex items-center gap-5">
+            <nav className="hidden items-center gap-5 text-[13px] text-text-muted md:flex" aria-label="Головна навігація">
+              <a href="#features" className="hover:text-text">Можливості</a>
+              <a href="#how-it-works" className="hover:text-text">Як працює</a>
+              <a href="#pricing" className="hover:text-text">Ціна</a>
+            </nav>
+            <LandingCTA
+              authState={authState}
+              className="rounded-lg border border-border bg-bg-elevated px-3 py-2 text-xs hover:border-accent hover:text-accent sm:px-4 sm:text-sm"
+            />
+          </div>
         </div>
       </header>
 
-      <section className="relative mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 px-5 py-14 sm:py-20 lg:grid-cols-[1.1fr_0.9fr]">
-        <Hero3DLoader className="pointer-events-none absolute inset-x-0 -top-6 bottom-0 opacity-45 [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_72%,transparent)] lg:-right-24 lg:left-auto lg:w-[58%] lg:opacity-85" />
-        <div className="relative text-center lg:text-left">
-          <span className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-border bg-bg-card px-3 py-1 text-[12px] text-text-muted">
-            <ScanLine size={13} className="text-accent" />
-            Аналіз здоровʼя, а не черговий трекер
-          </span>
-          <h1 className="m-0 text-3xl font-bold leading-tight sm:text-5xl">
-            Персональний трекер здоровʼя,
-            <br className="hidden sm:block" /> що пояснює ваші дані
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-[15px] text-text-muted sm:text-base lg:mx-0">
-            Vitalyzer не замінює ваш трекер сну, тренувань чи харчування — він читає дані, які ви вже збираєте, і
-            щодня дає одну конкретну персональну пораду замість чергового графіка.
-          </p>
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
-            <LandingCTA authState={authState} />
-            <a
-              href="#features"
-              className="inline-flex items-center gap-1.5 rounded-lg px-6 py-3 text-[15px] text-text-muted hover:text-text"
-            >
-              <ScanLine size={16} />
-              Як це працює
-            </a>
+      <section className="relative flex h-[calc(100svh-112px)] min-h-[520px] max-h-[700px] items-end overflow-hidden border-b border-border/70">
+        <Image
+          src="/vitalyzer-lifestyle-hero.png"
+          alt="Ранкове тренування та перегляд показників здоровʼя на телефоні"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[66%_center] sm:object-center"
+        />
+        <div className="absolute inset-0 bg-black/45" />
+        <div className="relative mx-auto w-full max-w-5xl px-5 pb-9 sm:pb-14">
+          <div className="max-w-2xl text-left">
+            <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/30 px-3 py-1 text-[12px] text-white/80 backdrop-blur-sm">
+              <ScanLine size={13} className="text-accent" />
+              Аналіз здоровʼя, а не черговий трекер
+            </span>
+            <h1 className="m-0 max-w-[680px] text-3xl font-bold leading-[1.12] text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.45)] sm:text-[42px] lg:text-[44px] xl:text-5xl">
+              Персональний трекер здоровʼя, що пояснює ваші дані
+            </h1>
+            <p className="mt-4 max-w-xl text-[14px] leading-6 text-white/75 sm:text-base">
+              Vitalyzer не замінює ваш трекер сну, тренувань чи харчування — він читає дані, які ви вже збираєте, і
+              щодня дає одну конкретну персональну пораду замість чергового графіка.
+            </p>
+            <div className="mt-6 flex flex-col items-stretch gap-2.5 min-[420px]:flex-row min-[420px]:items-center">
+              <LandingCTA authState={authState} />
+              <a
+                href="#features"
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-black/25 px-6 py-3 text-[15px] text-white/80 backdrop-blur-sm hover:bg-black/40 hover:text-white"
+              >
+                <ScanLine size={16} />
+                Як це працює
+              </a>
+            </div>
+            {authState === 'anonymous' && (
+              <GuestSignInButton
+                callbackUrl="/app"
+                className="mt-3 inline-flex items-center gap-1.5 text-[13px] text-white/75 underline hover:text-white"
+              />
+            )}
+            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/15 pt-4 text-[12px] text-white/70">
+              <span className="inline-flex items-center gap-1.5"><Moon size={14} className="text-accent" /> Сон і відновлення</span>
+              <span className="inline-flex items-center gap-1.5"><Activity size={14} className="text-info" /> Активність</span>
+              <span className="inline-flex items-center gap-1.5"><Utensils size={14} className="text-warn" /> Харчування</span>
+            </div>
           </div>
-          {authState === 'anonymous' && (
-            <GuestSignInButton
-              callbackUrl="/app"
-              className="mt-3 inline-flex items-center gap-1.5 text-[13px] text-text-muted underline hover:text-text"
-            />
-          )}
-        </div>
-
-        <div className="relative flex justify-center lg:justify-end">
-          <TiltCard maxTilt={10} scale={1.03}>
-            <MockDashboardPreview />
-          </TiltCard>
         </div>
       </section>
 
-      <section className="relative mx-auto max-w-4xl px-5 pb-14">
-        <Reveal className="grid grid-cols-2 gap-6 rounded-2xl border border-border bg-bg-card/60 px-6 py-8 sm:grid-cols-4">
+      <section className="relative mx-auto grid max-w-5xl items-center gap-7 px-5 py-10 md:grid-cols-[0.78fr_1.22fr] lg:gap-12 lg:py-14">
+        <Reveal>
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">Один спокійний огляд</span>
+          <h2 className="mt-3 text-2xl font-semibold leading-tight text-text sm:text-3xl">Від цифр до зрозумілої дії на сьогодні</h2>
+          <p className="mt-4 max-w-md text-sm leading-6 text-text-muted">Усі головні показники зібрані разом: без нескінченних таблиць і стрибків між застосунками.</p>
+          <div className="mt-6 grid gap-3 text-[13px] text-text-muted">
+            <div className="flex items-start gap-3 border-t border-border pt-3">
+              <Moon size={17} className="mt-0.5 shrink-0 text-accent" />
+              <span><strong className="font-medium text-text">Контекст замість шуму.</strong> Бачите не лише число, а причину зміни.</span>
+            </div>
+            <div className="flex items-start gap-3 border-t border-border pt-3">
+              <Activity size={17} className="mt-0.5 shrink-0 text-info" />
+              <span><strong className="font-medium text-text">Одна наступна дія.</strong> Рекомендація, яку реально виконати сьогодні.</span>
+            </div>
+          </div>
+        </Reveal>
+        <Reveal delay={0.08}>
+          <TiltCard maxTilt={5} scale={1.01}>
+            <MockDashboardPreview />
+          </TiltCard>
+        </Reveal>
+      </section>
+
+      <section className="relative mx-auto max-w-5xl px-5 pb-16">
+        <Reveal className="grid grid-cols-2 gap-x-4 gap-y-7 rounded-xl border border-border bg-bg-card/60 px-5 py-7 sm:grid-cols-4 sm:px-7">
           {STATS.map((s) => (
             <AnimatedStat key={s.label} value={s.value} suffix={s.suffix} label={s.label} />
           ))}
@@ -233,7 +268,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="relative mx-auto max-w-4xl px-5 pb-16">
+      <section id="how-it-works" className="relative mx-auto max-w-4xl px-5 pb-16">
         <Reveal>
           <h2 className="mb-8 text-center text-xl font-semibold sm:text-2xl">Як це працює</h2>
         </Reveal>
