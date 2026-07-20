@@ -397,7 +397,10 @@ export default async function LandingPage() {
           </nav>
           <div className="text-center text-xs sm:text-right">
             <div>© {new Date().getFullYear()} Vitalyzer</div>
-            <div className="mt-2 text-text-muted/70">Приватність за замовчуванням</div>
+            <div className="mt-2 flex justify-center gap-3 text-text-muted/70 sm:justify-end">
+              <a href="/privacy" className="hover:text-text">Конфіденційність</a>
+              <a href="/terms" className="hover:text-text">Умови</a>
+            </div>
           </div>
         </div>
       </footer>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { signIn, signOut, useSession } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import {
   Bell,
   CheckCircle2,
@@ -14,7 +14,6 @@ import {
   RotateCcw,
   Save,
   Send,
-  ShieldCheck,
   Smartphone,
   Target,
   Trash2,
@@ -24,6 +23,7 @@ import {
 } from 'lucide-react';
 import { showToast } from '@/lib/toast';
 import type { Settings } from '@/lib/types';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 type InstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -408,13 +408,12 @@ export default function SettingsPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             {isGuest && (
-              <button
-                onClick={() => signIn('google', { callbackUrl: '/app' })}
+              <GoogleSignInButton
+                callbackUrl="/app"
+                label="Зберегти в Google-акаунті"
+                unavailableLabel="Google-вхід недоступний"
                 className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-[13px] font-semibold text-black hover:opacity-90"
-              >
-                <ShieldCheck size={14} />
-                Зберегти в Google-акаунті
-              </button>
+              />
             )}
             {!isGuest && (
               <button
