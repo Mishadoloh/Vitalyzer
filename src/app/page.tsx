@@ -8,7 +8,6 @@ import {
   ScanLine,
   ShieldCheck,
   Smartphone,
-  Sparkles,
   UploadCloud,
   XCircle,
 } from 'lucide-react';
@@ -31,7 +30,7 @@ const FEATURES = [
     text: 'Імпортуйте експорти з Apple Health, Google Fit, Strava, MyFitnessPal, Garmin — або вносьте дані вручну за 10 секунд.',
   },
   {
-    icon: Sparkles,
+    icon: ScanLine,
     title: 'Порада на кожен день',
     text: 'Рушій трендів аналізує сон, тренування, харчування, вагу й настрій і дає одну конкретну дію замість купи графіків.',
   },
@@ -169,7 +168,7 @@ export default async function LandingPage() {
         <Hero3DLoader className="pointer-events-none absolute inset-x-0 -top-6 bottom-0 opacity-45 [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_72%,transparent)] lg:-right-24 lg:left-auto lg:w-[58%] lg:opacity-85" />
         <div className="relative text-center lg:text-left">
           <span className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-border bg-bg-card px-3 py-1 text-[12px] text-text-muted">
-            <Sparkles size={13} className="text-accent" />
+            <ScanLine size={13} className="text-accent" />
             Аналіз здоровʼя, а не черговий трекер
           </span>
           <h1 className="m-0 text-3xl font-bold leading-tight sm:text-5xl">

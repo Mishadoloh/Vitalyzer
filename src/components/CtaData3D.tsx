@@ -61,7 +61,7 @@ function DataWave() {
   );
 }
 
-function DataSparkles() {
+function DataParticles() {
   const points = useRef<THREE.Points>(null);
 
   const { positions, colors, seeds } = useMemo(() => {
@@ -457,7 +457,7 @@ export default function CtaData3D({ className }: { className?: string }) {
           <HoloGrid />
           <EnergyShell />
           <DataBurstRays />
-          <DataSparkles />
+          <DataParticles />
           <SignalComets />
           <DataWave />
           <CoreSignal />

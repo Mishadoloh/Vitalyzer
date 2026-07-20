@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, RefreshCw, Sparkles } from 'lucide-react';
+import { CheckCircle2, Lightbulb, RefreshCw } from 'lucide-react';
 import type { AdviceResult } from '@/lib/types';
 
 export default function AdviceCard({
@@ -17,7 +17,7 @@ export default function AdviceCard({
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-4 sm:px-5">
         <h2 className="m-0 flex items-center gap-2 text-base font-semibold text-text">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/10 text-accent">
-            <Sparkles size={16} />
+            <Lightbulb size={16} />
           </span>
           <span>
             Порада на сьогодні
@@ -42,8 +42,8 @@ export default function AdviceCard({
         {!loading && advice && advice.items.length > 0 && (
           <>
             <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-2.5 py-1 text-[11px] text-accent">
-              <Sparkles size={12} />
-              {advice.tag} · {advice.source === 'ai' ? 'Розширений аналіз' : 'Локальний аналіз'}
+              <Lightbulb size={12} />
+              {advice.tag} · за вашими даними
             </span>
             <ul className="mt-2 space-y-2">
               {advice.items.map((item, index) => (

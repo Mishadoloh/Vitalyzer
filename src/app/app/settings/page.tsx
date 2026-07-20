@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { signOut, useSession } from 'next-auth/react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import {
   Bell,
   CheckCircle2,
@@ -9,7 +9,6 @@ import {
   CreditCard,
   Database,
   Download,
-  KeyRound,
   LogOut,
   Mail,
   RotateCcw,
@@ -17,7 +16,6 @@ import {
   Send,
   ShieldCheck,
   Smartphone,
-  Sparkles,
   Target,
   Trash2,
   TriangleAlert,
@@ -160,7 +158,6 @@ export default function SettingsPage() {
   const isGuest = Boolean((session?.user as { isGuest?: boolean } | undefined)?.isGuest);
   const userEmail = session?.user?.email || 'Гостьовий акаунт';
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
-  const [apiKeyInput, setApiKeyInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -236,25 +233,6 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
-  }
-
-  async function saveApiKey() {
-    const response = await fetch('/api/settings/api-key', {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ apiKey: apiKeyInput }),
-    });
-    const updated = await response.json();
-    setSettings(updated);
-    setApiKeyInput('');
-    showToast(updated.hasApiKey ? 'Ключ збережено. Розширений аналіз увімкнено.' : 'Ключ порожній.');
-  }
-
-  async function clearApiKey() {
-    const response = await fetch('/api/settings/api-key', { method: 'DELETE' });
-    const updated = await response.json();
-    setSettings(updated);
-    showToast('Ключ видалено. Використовується локальний аналіз.');
   }
 
   async function sendTestDigest() {
@@ -406,8 +384,7 @@ export default function SettingsPage() {
         <div className="mb-4.5 flex items-start gap-2.5 rounded-2xl border border-warn/30 bg-warn/10 p-4 text-[13px] text-warn">
           <TriangleAlert size={16} className="mt-0.5 shrink-0" />
           <span>
-            Ви увійшли як гість. Цей акаунт не прив'язаний до email, тому дані можуть бути втрачені після очищення сесії.
-            Перед важливими змінами завантажте резервну копію.
+            Ви увійшли як гість. Увійдіть через Google нижче — записи, звички та фото будуть перенесені до постійного акаунта без дублікатів.
           </span>
         </div>
       )}
@@ -430,6 +407,15 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            {isGuest && (
+              <button
+                onClick={() => signIn('google', { callbackUrl: '/app' })}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-[13px] font-semibold text-black hover:opacity-90"
+              >
+                <ShieldCheck size={14} />
+                Зберегти в Google-акаунті
+              </button>
+            )}
             {!isGuest && (
               <button
                 onClick={openBillingPortal}
@@ -715,34 +701,10 @@ export default function SettingsPage() {
         </div>
       </SettingsSection>
 
-      <SettingsSection icon={ShieldCheck} title="Аналіз порад" description="Поради можуть працювати локально або через ваш приватний ключ розширеного аналізу.">
-        <div className="mb-3 rounded-xl border border-border bg-bg-elevated p-3 text-xs text-text-muted">
-          <div className="flex items-center gap-2 font-semibold text-text">
-            <ShieldCheck size={14} className="text-accent" />
-            Поточний стан: {settings.hasApiKey ? <span className="text-accent-strong">ключ налаштовано</span> : <span>локальний аналіз без ключа</span>}
-          </div>
-          <p className="mt-1 leading-5">
-            Ключ зберігається на сервері та не показується у браузері. Якщо ключ не задано, застосунок використовує вбудовані правила і тренди.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
-          <Field label="Ключ розширеного аналізу">
-            <input type="password" placeholder="sk-ant-..." value={apiKeyInput} onChange={(e) => setApiKeyInput(e.target.value)} className="rounded-lg border border-border bg-bg-elevated px-2.5 py-2 text-text" />
-          </Field>
-          <button onClick={saveApiKey} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-accent-strong px-4 py-2 text-[13px] font-semibold text-[#06281c]">
-            <KeyRound size={14} />
-            Зберегти ключ
-          </button>
-          <button onClick={clearApiKey} className="rounded-lg border border-danger/40 px-4 py-2 text-[13px] text-danger">
-            Видалити
-          </button>
-        </div>
-      </SettingsSection>
-
       <SettingsSection icon={Database} title="Дані та розділи" description="Швидке наповнення, резервні копії та експорт окремих розділів.">
         <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
           <button onClick={seedDemoData} disabled={seedingDemo} className="rounded-xl border border-accent/30 bg-accent/10 p-3 text-left transition-colors hover:border-accent/60 disabled:opacity-60">
-            <Sparkles size={17} className="mb-2 text-accent" />
+            <Database size={17} className="mb-2 text-accent" />
             <div className="text-sm font-semibold text-text">{seedingDemo ? 'Додаю демо...' : 'Заповнити демо-даними'}</div>
             <div className="mt-1 text-xs text-text-muted">Створює 14 днів прикладів для графіків.</div>
           </button>

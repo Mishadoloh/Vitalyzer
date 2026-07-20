@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import {
   Activity,
   Camera,
+  CalendarRange,
   Dumbbell,
   History,
   LayoutDashboard,
@@ -24,6 +25,7 @@ import {
 const NAV = [
   { href: '/app', label: 'Дашборд', icon: LayoutDashboard },
   { href: '/app/quick-add', label: 'Швидкий запис', icon: PlusCircle },
+  { href: '/app/weekly-report', label: 'Тиждень', icon: CalendarRange },
   { href: '/app/habits', label: 'Звички', icon: Activity },
   { href: '/app/progress-photos', label: 'Фото', icon: Camera },
   { href: '/app/import', label: 'Імпорт даних', icon: UploadCloud },

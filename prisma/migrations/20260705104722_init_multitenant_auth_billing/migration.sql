@@ -136,8 +136,6 @@ CREATE TABLE "Settings" (
     "calTarget" DOUBLE PRECISION NOT NULL DEFAULT 2200,
     "proteinTarget" DOUBLE PRECISION NOT NULL DEFAULT 1.8,
     "workoutsTarget" INTEGER NOT NULL DEFAULT 4,
-    "anthropicApiKey" TEXT,
-    "aiModel" TEXT,
 
     CONSTRAINT "Settings_pkey" PRIMARY KEY ("id")
 );

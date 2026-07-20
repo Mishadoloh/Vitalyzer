@@ -14,7 +14,6 @@ import {
   Scale,
   Settings,
   Smile,
-  Sparkles,
   Target,
   Trash2,
   TrendingDown,
@@ -296,7 +295,7 @@ export default function DashboardPage() {
     { label: 'Тренування', count: workouts.length, icon: Dumbbell, tone: 'text-info', href: '/app/quick-add' },
     { label: 'Харчування', count: nutrition.length, icon: Utensils, tone: 'text-warn', href: '/app/quick-add' },
     { label: 'Вага', count: weight.length, icon: TrendingUp, tone: 'text-accent', href: '/app/quick-add' },
-    { label: 'Настрій', count: mood.length, icon: Sparkles, tone: 'text-info', href: '/app/quick-add' },
+    { label: 'Настрій', count: mood.length, icon: Smile, tone: 'text-info', href: '/app/quick-add' },
   ];
   const fallbackBalanceScores = buildFallbackBalanceScores({ sleep, workouts, nutrition, settings });
   const balanceScores = {
@@ -505,7 +504,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <button onClick={seedDemoData} disabled={seedingDemo} className="rounded-2xl border border-accent/30 bg-accent/10 p-4 text-left transition-colors hover:border-accent/60 disabled:opacity-60">
-          <Sparkles size={18} className="mb-3 text-accent" />
+          <Activity size={18} className="mb-3 text-accent" />
           <span className="block text-sm font-semibold text-text">{seedingDemo ? 'Додаємо демо...' : 'Заповнити демо-даними'}</span>
           <span className="mt-1 block text-xs leading-5 text-text-muted">14 днів сну, харчування, ваги, настрою і тренувань.</span>
         </button>
@@ -592,7 +591,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 gap-5 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[12px] text-accent">
-                <Sparkles size={13} />
+                <Activity size={13} />
                 Старт за 2 хвилини
               </span>
               <h2 className="mt-4 text-xl font-semibold text-text">Додайте перші дані, і дашборд оживе</h2>
@@ -610,7 +609,7 @@ export default function DashboardPage() {
                 Імпорт файлу
               </Link>
               <button onClick={seedDemoData} disabled={seedingDemo} className="rounded-xl border border-border bg-bg-elevated p-3 text-left text-sm hover:border-accent/50 disabled:opacity-60">
-                <Sparkles size={17} className="mb-2 text-warn" />
+                <Activity size={17} className="mb-2 text-warn" />
                 {seedingDemo ? 'Додаємо...' : 'Демо-дані'}
               </button>
             </div>
@@ -772,7 +771,7 @@ function SmartInsightCard({ insight }: { insight: SmartInsight }) {
 
   return (
     <Link href={insight.href} className={`rounded-2xl border p-3.5 transition-colors hover:bg-bg-elevated ${toneClass}`}>
-      <Sparkles size={16} className="mb-2" />
+      <Activity size={16} className="mb-2" />
       <div className="text-sm font-semibold text-text">{insight.title}</div>
       <p className="mt-1 text-xs leading-5 text-text-muted">{insight.text}</p>
     </Link>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, Download, ImagePlus, LockKeyhole, MoveHorizontal, Trash2 } from 'lucide-react';
 import { showToast } from '@/lib/toast';
+import { useSession } from 'next-auth/react';
 
 const DB_NAME = 'vitalyzer-progress-photos';
 const STORE_NAME = 'photos';
@@ -14,9 +15,15 @@ interface StoredPhoto {
   weightKg: number | null;
   blob: Blob;
   createdAt: string;
+  ownerId?: string;
 }
 
-interface PhotoView extends StoredPhoto {
+interface PhotoView {
+  id: string;
+  date: string;
+  note: string;
+  weightKg: number | null;
+  createdAt: string;
   url: string;
 }
 
@@ -96,6 +103,8 @@ async function resizeImage(file: File): Promise<Blob> {
 }
 
 export default function ProgressPhotosPage() {
+  const { data: session } = useSession();
+  const userId = (session?.user as { id?: string } | undefined)?.id;
   const fileRef = useRef<HTMLInputElement | null>(null);
   const photosRef = useRef<PhotoView[]>([]);
   const [photos, setPhotos] = useState<PhotoView[]>([]);
@@ -104,22 +113,46 @@ export default function ProgressPhotosPage() {
   const [weightKg, setWeightKg] = useState('');
   const [saving, setSaving] = useState(false);
 
+  async function uploadPhoto(photo: StoredPhoto) {
+    const form = new FormData();
+    form.set('id', photo.id);
+    form.set('date', photo.date);
+    form.set('note', photo.note);
+    form.set('weightKg', photo.weightKg === null ? '' : String(photo.weightKg));
+    form.set('createdAt', photo.createdAt);
+    form.set('image', new File([photo.blob], `${photo.id}.jpg`, { type: photo.blob.type || 'image/jpeg' }));
+    const response = await fetch('/api/progress-photos', { method: 'POST', body: form });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({})) as { error?: string };
+      throw new Error(body.error || 'Не вдалося синхронізувати фото');
+    }
+  }
+
   async function load() {
-    const rows = await getPhotos();
+    const localRows = await getPhotos();
+    const transferFrom = localStorage.getItem('vitalyzer-progress-photos-transfer-from-v1');
+    const owner = localStorage.getItem('vitalyzer-progress-photos-owner-v1');
+    const ignoreLegacy = localStorage.getItem('vitalyzer-progress-photos-ignore-legacy-v1') === 'true';
+    const ownedRows = localRows.filter((photo) => photo.ownerId === userId || photo.ownerId === transferFrom || (!ignoreLegacy && !photo.ownerId && owner === userId));
+    await Promise.all(ownedRows.map((photo) => uploadPhoto(photo)));
+    if (userId) {
+      await Promise.all(ownedRows.filter((photo) => photo.ownerId !== userId).map((photo) => putPhoto({ ...photo, ownerId: userId })));
+      localStorage.removeItem('vitalyzer-progress-photos-transfer-from-v1');
+    }
+    const response = await fetch('/api/progress-photos', { cache: 'no-store' });
+    if (!response.ok) throw new Error('Не вдалося завантажити приватні фото');
+    const rows = await response.json() as Array<Omit<PhotoView, 'url'> & { imageUrl: string }>;
     setPhotos((current) => {
-      current.forEach((photo) => URL.revokeObjectURL(photo.url));
-      const next = rows.map((photo) => ({ ...photo, url: URL.createObjectURL(photo.blob) }));
+      const next = rows.map((photo) => ({ ...photo, url: photo.imageUrl }));
       photosRef.current = next;
       return next;
     });
   }
 
   useEffect(() => {
-    load().catch((e) => showToast(e instanceof Error ? e.message : String(e), true));
-    return () => {
-      photosRef.current.forEach((photo) => URL.revokeObjectURL(photo.url));
-    };
-  }, []);
+    if (userId) load().catch((e) => showToast(e instanceof Error ? e.message : String(e), true));
+    return () => undefined;
+  }, [userId]);
 
   const oldest = useMemo(() => [...photos].sort((a, b) => a.date.localeCompare(b.date))[0], [photos]);
   const newest = photos[0];
@@ -134,19 +167,22 @@ export default function ProgressPhotosPage() {
     setSaving(true);
     try {
       const blob = await resizeImage(file);
-      await putPhoto({
+      const created: StoredPhoto = {
         id: crypto.randomUUID(),
         date,
         note: note.trim(),
         weightKg: weightKg ? Number(weightKg) : null,
         blob,
         createdAt: new Date().toISOString(),
-      });
+        ownerId: userId,
+      };
+      await putPhoto(created);
+      await uploadPhoto(created);
       setNote('');
       setWeightKg('');
       if (fileRef.current) fileRef.current.value = '';
       await load();
-      showToast('Фото прогресу збережено на цьому пристрої');
+      showToast('Фото прогресу збережено та синхронізовано');
     } catch (e) {
       showToast(e instanceof Error ? e.message : String(e), true);
     } finally {
@@ -155,7 +191,9 @@ export default function ProgressPhotosPage() {
   }
 
   async function deletePhoto(id: string) {
-    if (!confirm('Видалити це фото прогресу з пристрою?')) return;
+    if (!confirm('Видалити це фото прогресу з усіх синхронізованих пристроїв?')) return;
+    const response = await fetch(`/api/progress-photos/${id}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Не вдалося видалити фото');
     await removePhoto(id);
     await load();
     showToast('Фото видалено');
@@ -166,11 +204,11 @@ export default function ProgressPhotosPage() {
       <header className="mb-5 overflow-hidden rounded-3xl border border-border bg-[linear-gradient(135deg,rgba(27,31,42,0.98),rgba(12,24,26,0.98))] p-5 shadow-xl shadow-black/20">
         <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[12px] text-accent">
           <LockKeyhole size={13} />
-          приватно на пристрої
+          приватно й синхронізовано
         </span>
         <h1 className="m-0 text-2xl font-bold text-text">Фото прогресу</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-          Додавайте одне фото на тиждень, щоб бачити форму разом із вагою. Знімки не завантажуються на сервер і не входять у хмарний backup.
+          Додавайте одне фото на тиждень, щоб бачити форму разом із вагою. Знімки доступні лише у вашому акаунті та захищені авторизацією.
         </p>
       </header>
 

@@ -73,6 +73,30 @@ model User {
   moodEntries      MoodEntry[]
   settings         Settings?
   adviceCache      AdviceCache[]
+  syncedHabitState SyncedHabitState?
+  progressPhotos   ProgressPhoto[]
+}
+
+model SyncedHabitState {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      Json
+  updatedAt DateTime @updatedAt
+}
+
+model ProgressPhoto {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String
+  note      String   @default("")
+  weightKg  Float?
+  mimeType  String   @default("image/jpeg")
+  image     Bytes
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
 }
 
 // --- Personal health data (all scoped to a user) ---
@@ -172,8 +196,6 @@ model Settings {
   heightCm        Float?
   sex             String  @default("unknown") // unknown | female | male
   activityLevel   String  @default("moderate") // sedentary | light | moderate | active | athlete
-  anthropicApiKey String? // optional — overrides ANTHROPIC_API_KEY env var if set
-  aiModel         String? // optional — defaults to claude-sonnet-4-5 in code
   emailDigestEnabled Boolean @default(false)
   emailDigestAddress String?
   emailDigestFrequency String @default("weekly") // daily | weekly
@@ -188,7 +210,7 @@ model AdviceCache {
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   date         String // 'YYYY-MM-DD'
-  source       String // 'rules' | 'ai'
+  source       String // advice calculation source
   tag          String
   overallScore Int?
   scoresJson   Json

@@ -12,7 +12,6 @@ import {
   Moon,
   Plus,
   Scale,
-  Sparkles,
   UploadCloud,
   Utensils,
   X,
@@ -358,7 +357,7 @@ export default function ImportPage() {
           disabled={seedingDemo}
           className="rounded-2xl border border-accent/30 bg-accent/10 p-4 text-left transition-colors hover:border-accent/60 disabled:opacity-60"
         >
-          <Sparkles size={18} className="mb-2 text-accent" />
+          <Database size={18} className="mb-2 text-accent" />
           <div className="text-sm font-semibold text-text">{seedingDemo ? 'Додаю приклад...' : 'Немає файлу? Додати демо-дані'}</div>
           <div className="mt-1 text-xs text-text-muted">Створить 14 днів прикладів для дашборду та трендів.</div>
         </button>

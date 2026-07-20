@@ -24,7 +24,6 @@ export async function getOrCreateSettingsRow(userId: string) {
 
 export async function getSettingsForClient(userId: string): Promise<Settings> {
   const row = await getOrCreateSettingsRow(userId);
-  const hasApiKey = Boolean(row.anthropicApiKey || process.env.ANTHROPIC_API_KEY);
   return {
     weightKg: row.weightKg,
     goal: row.goal as Settings['goal'],
@@ -38,8 +37,6 @@ export async function getSettingsForClient(userId: string): Promise<Settings> {
     activityLevel: ['sedentary', 'light', 'moderate', 'active', 'athlete'].includes(row.activityLevel)
       ? (row.activityLevel as Settings['activityLevel'])
       : 'moderate',
-    aiModel: row.aiModel,
-    hasApiKey,
     emailDigestEnabled: row.emailDigestEnabled,
     emailDigestAddress: row.emailDigestAddress,
     emailDigestFrequency: row.emailDigestFrequency === 'daily' ? 'daily' : 'weekly',
@@ -47,10 +44,4 @@ export async function getSettingsForClient(userId: string): Promise<Settings> {
     backupEmailEnabled: row.backupEmailEnabled,
     backupEmailLastSentAt: row.backupEmailLastSentAt?.toISOString() ?? null,
   };
-}
-
-// Resolves the effective Anthropic key: DB override takes priority, otherwise env var.
-export async function resolveApiKey(userId: string): Promise<string | null> {
-  const row = await getOrCreateSettingsRow(userId);
-  return row.anthropicApiKey || process.env.ANTHROPIC_API_KEY || null;
 }

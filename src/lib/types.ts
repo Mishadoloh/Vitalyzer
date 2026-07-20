@@ -75,9 +75,6 @@ export interface Settings {
   heightCm?: number | null;
   sex?: 'unknown' | 'female' | 'male';
   activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'athlete';
-  anthropicApiKey?: string | null;
-  aiModel?: string | null;
-  hasApiKey?: boolean; // derived, true if a key is configured server-side (env or DB)
   emailDigestEnabled?: boolean;
   emailDigestAddress?: string | null;
   emailDigestFrequency?: 'daily' | 'weekly';
@@ -137,7 +134,7 @@ export interface MoodStats {
 }
 
 export interface AdviceResult {
-  source: 'rules' | 'ai';
+  source: 'rules';
   tag: string;
   overallScore: number | null;
   scores: { sleep: number | null; workouts: number | null; nutrition: number | null };

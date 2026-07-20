@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { generateAiAdvice } from '@/lib/ai';
 import { generateRuleBasedAdvice, todayISO } from '@/lib/insights';
-import { getOrCreateSettingsRow, resolveApiKey } from '@/lib/settings';
+import { getOrCreateSettingsRow } from '@/lib/settings';
 import { requireSubscribedUser } from '@/lib/auth-helpers';
 import type { AdviceResult } from '@/lib/types';
 
@@ -46,18 +45,7 @@ export async function GET(req: NextRequest) {
 
   const ruleBased = generateRuleBasedAdvice(sleepAll, workoutsAll, nutritionAll, settings, weightAll, moodAll);
 
-  let finalAdvice: AdviceResult = ruleBased;
-  let warning: string | null = null;
-
-  const apiKey = await resolveApiKey(userId);
-  if (apiKey) {
-    try {
-      finalAdvice = await generateAiAdvice(ruleBased, apiKey, settingsRow.aiModel);
-    } catch (e) {
-      warning = 'Розширений аналіз недоступний, використано локальний рушій: ' + (e instanceof Error ? e.message : String(e));
-      finalAdvice = ruleBased;
-    }
-  }
+  const finalAdvice: AdviceResult = ruleBased;
 
   await prisma.adviceCache.upsert({
     where: { userId_date: { userId, date: today } },
@@ -82,7 +70,7 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ ...finalAdvice, warning });
+  return NextResponse.json(finalAdvice);
 }
 
 function cacheRowToAdvice(row: {
@@ -95,7 +83,7 @@ function cacheRowToAdvice(row: {
   generatedAt: Date;
 }): AdviceResult {
   return {
-    source: row.source as 'rules' | 'ai',
+    source: 'rules',
     tag: row.tag,
     overallScore: row.overallScore,
     scores: row.scoresJson as AdviceResult['scores'],

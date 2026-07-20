@@ -176,6 +176,12 @@ export default function HabitsPage() {
       }
     }
     load();
+    const onSynced = (event: Event) => {
+      const next = (event as CustomEvent<HabitStorage>).detail;
+      if (next) setStorage({ ...emptyStorage(), ...next });
+    };
+    window.addEventListener('vitalyzer:habits-synced', onSynced);
+    return () => window.removeEventListener('vitalyzer:habits-synced', onSynced);
   }, []);
 
   const autoDone = useMemo(() => {
@@ -217,6 +223,7 @@ export default function HabitsPage() {
   function save(next: HabitStorage) {
     setStorage(next);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    window.dispatchEvent(new Event('vitalyzer:habits-changed'));
   }
 
   function toggleHabit(id: HabitId) {

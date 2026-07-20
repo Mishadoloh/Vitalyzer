@@ -4,6 +4,7 @@ import AuthSessionProvider from '@/components/AuthSessionProvider';
 import PwaRegister from '@/components/PwaRegister';
 import ReminderScheduler from '@/components/ReminderScheduler';
 import Toaster from '@/components/Toaster';
+import CloudSync from '@/components/CloudSync';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || 'https://vitalyzer.vercel.app'),
@@ -38,7 +39,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="uk">
       <body>
-        <AuthSessionProvider>{children}</AuthSessionProvider>
+        <AuthSessionProvider>
+          {children}
+          <CloudSync />
+        </AuthSessionProvider>
         <PwaRegister />
         <ReminderScheduler />
         <Toaster />
