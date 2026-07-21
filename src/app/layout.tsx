@@ -72,8 +72,12 @@ export async function generateMetadata(): Promise<Metadata> {
     appleWebApp: {capable: true, statusBarStyle: 'black-translucent', title: 'Metrivyn'},
     formatDetection: {telephone: false},
     icons: {
-      icon: [{url: '/icon.svg', type: 'image/svg+xml'}],
-      apple: [{url: '/icon.svg', type: 'image/svg+xml'}]
+      icon: [
+        {url: '/icon.svg', type: 'image/svg+xml'},
+        {url: '/icons/icon-192.png', type: 'image/png', sizes: '192x192'},
+        {url: '/icons/icon-512.png', type: 'image/png', sizes: '512x512'}
+      ],
+      apple: [{url: '/icons/apple-touch-icon.png', type: 'image/png', sizes: '180x180'}]
     }
   };
 }

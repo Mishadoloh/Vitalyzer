@@ -1,6 +1,14 @@
-const CACHE_NAME = 'metrivyn-shell-v3';
+const CACHE_NAME = 'metrivyn-shell-v4';
 const OFFLINE_URL = '/offline.html';
-const PRECACHE_URLS = ['/manifest.webmanifest', '/icon.svg', OFFLINE_URL];
+const PRECACHE_URLS = [
+  '/manifest.webmanifest',
+  '/icon.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/icon-maskable-512.png',
+  '/icons/apple-touch-icon.png',
+  OFFLINE_URL,
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

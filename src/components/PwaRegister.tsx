@@ -37,7 +37,12 @@ export default function PwaRegister() {
 
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
     window.addEventListener('appinstalled', onAppInstalled);
-    window.addEventListener('load', registerServiceWorker);
+
+    if (document.readyState === 'complete') {
+      registerServiceWorker();
+    } else {
+      window.addEventListener('load', registerServiceWorker, { once: true });
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
