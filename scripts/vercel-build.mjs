@@ -10,11 +10,17 @@ if (databaseUrl) {
   process.env.DATABASE_URL = databaseUrl;
 }
 
-const commands = [
-  ['npx', ['prisma', 'generate']],
-  ['npx', ['prisma', 'migrate', 'deploy']],
-  ['npx', ['next', 'build']],
-];
+const commands = [['npx', ['prisma', 'generate']]];
+
+// Vercel can build several deployments concurrently. Run migrations explicitly
+// to avoid competing builds waiting on the same Postgres advisory lock.
+if (!process.env.VERCEL || process.env.RUN_DATABASE_MIGRATIONS === '1') {
+  commands.push(['npx', ['prisma', 'migrate', 'deploy']]);
+} else {
+  console.log('Skipping database migrations during Vercel build.');
+}
+
+commands.push(['npx', ['next', 'build']]);
 
 for (const [command, args] of commands) {
   const result = spawnSync(command, args, {
