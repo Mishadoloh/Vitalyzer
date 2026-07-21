@@ -9,6 +9,22 @@ const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
 
 export const googleAuthConfigured = Boolean(googleClientId && googleClientSecret);
 
+function readGoogleProfile(idToken: string | null | undefined) {
+  if (!idToken) return null;
+  try {
+    const payload = idToken.split('.')[1];
+    if (!payload) return null;
+    return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as {
+      email?: string;
+      name?: string;
+      picture?: string;
+      email_verified?: boolean;
+    };
+  } catch {
+    return null;
+  }
+}
+
 const providers: NextAuthOptions['providers'] = [];
 
 if (googleClientId && googleClientSecret) {
@@ -16,6 +32,12 @@ if (googleClientId && googleClientSecret) {
     GoogleProvider({
       clientId: googleClientId,
       clientSecret: googleClientSecret,
+      authorization: {
+        params: {
+          prompt: 'select_account',
+          scope: 'openid email profile',
+        },
+      },
     })
   );
 }
@@ -50,10 +72,58 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider !== 'google') return true;
       return (profile as { email_verified?: boolean } | undefined)?.email_verified === true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account, profile }) {
       if (user) {
-        token.userId = user.id;
-        token.isGuest = (user as { isGuest?: boolean }).isGuest ?? false;
+        if (account?.provider === 'google') {
+          const googleProfile = profile as {
+            email?: string;
+            name?: string;
+            picture?: string;
+            email_verified?: boolean;
+          } | undefined;
+          const upgradedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              isGuest: false,
+              email: googleProfile?.email ?? user.email,
+              name: googleProfile?.name ?? user.name,
+              image: googleProfile?.picture ?? user.image,
+              emailVerified: googleProfile?.email_verified ? new Date() : undefined,
+            },
+          });
+          token.userId = upgradedUser.id;
+          token.isGuest = false;
+          token.email = upgradedUser.email;
+          token.name = upgradedUser.name;
+          token.picture = upgradedUser.image;
+        } else {
+          token.userId = user.id;
+          token.isGuest = (user as { isGuest?: boolean }).isGuest ?? false;
+        }
+      }
+
+      if (!user && token.userId && token.isGuest) {
+        const linkedGoogle = await prisma.account.findFirst({
+          where: { userId: token.userId as string, provider: 'google' },
+          select: { id_token: true },
+        });
+        if (linkedGoogle) {
+          const googleProfile = readGoogleProfile(linkedGoogle.id_token);
+          const upgradedUser = await prisma.user.update({
+            where: { id: token.userId as string },
+            data: {
+              isGuest: false,
+              email: googleProfile?.email,
+              name: googleProfile?.name,
+              image: googleProfile?.picture,
+              emailVerified: googleProfile?.email_verified ? new Date() : undefined,
+            },
+          });
+          token.isGuest = false;
+          token.email = upgradedUser.email;
+          token.name = upgradedUser.name;
+          token.picture = upgradedUser.image;
+        }
       }
       return token;
     },

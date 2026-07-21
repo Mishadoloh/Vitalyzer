@@ -15,15 +15,18 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { getServerSession } from 'next-auth';
+import { getTranslations } from 'next-intl/server';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import LandingCTA from '@/components/LandingCTA';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 import GuestSignInButton from '@/components/GuestSignInButton';
 import MockDashboardPreview from '@/components/MockDashboardPreview';
 import TiltCard from '@/components/TiltCard';
 import Reveal from '@/components/Reveal';
 import AnimatedStat from '@/components/AnimatedStat';
 import FaqAccordion from '@/components/FaqAccordion';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const FEATURES = [
   {
@@ -142,6 +145,8 @@ const PRICING_ITEMS = [
 ];
 
 export default async function LandingPage() {
+  const t = await getTranslations('Landing');
+  const nav = await getTranslations('Navigation');
   const authState = await getAuthState();
   const price = process.env.NEXT_PUBLIC_SUBSCRIPTION_PRICE_LABEL || '$4.99 / місяць';
 
@@ -156,10 +161,11 @@ export default async function LandingPage() {
           </div>
           <div className="flex items-center gap-5">
             <nav className="hidden items-center gap-5 text-[13px] text-text-muted md:flex" aria-label="Головна навігація">
-              <a href="#features" className="hover:text-text">Можливості</a>
-              <a href="#how-it-works" className="hover:text-text">Як працює</a>
-              <a href="#pricing" className="hover:text-text">Ціна</a>
+              <a href="#features" className="hover:text-text">{nav('features')}</a>
+              <a href="#how-it-works" className="hover:text-text">{nav('howItWorks')}</a>
+              <a href="#pricing" className="hover:text-text">{nav('pricing')}</a>
             </nav>
+            <LanguageSwitcher compact />
             <LandingCTA
               authState={authState}
               className="rounded-lg border border-border bg-bg-elevated px-3 py-2 text-xs hover:border-accent hover:text-accent sm:px-4 sm:text-sm"
@@ -171,7 +177,7 @@ export default async function LandingPage() {
       <section className="relative flex h-[calc(100svh-112px)] min-h-[520px] max-h-[700px] items-end overflow-hidden border-b border-border/70">
         <Image
           src="/vitalyzer-lifestyle-hero.png"
-          alt="Ранкове тренування та перегляд показників здоровʼя на телефоні"
+          alt={t('title')}
           fill
           priority
           sizes="100vw"
@@ -182,24 +188,30 @@ export default async function LandingPage() {
           <div className="max-w-2xl text-left">
             <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/30 px-3 py-1 text-[12px] text-white/80 backdrop-blur-sm">
               <ScanLine size={13} className="text-accent" />
-              Аналіз здоровʼя, а не черговий трекер
+              {t('eyebrow')}
             </span>
             <h1 className="m-0 max-w-[680px] text-3xl font-bold leading-[1.12] text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.45)] sm:text-[42px] lg:text-[44px] xl:text-5xl">
-              Персональний трекер здоровʼя, що пояснює ваші дані
+              {t('title')}
             </h1>
             <p className="mt-4 max-w-xl text-[14px] leading-6 text-white/75 sm:text-base">
-              Vitalyzer не замінює ваш трекер сну, тренувань чи харчування — він читає дані, які ви вже збираєте, і
-              щодня дає одну конкретну персональну пораду замість чергового графіка.
+              {t('subtitle')}
             </p>
             <div className="mt-6 flex flex-col items-stretch gap-2.5 min-[420px]:flex-row min-[420px]:items-center">
               <LandingCTA authState={authState} />
-              <a
-                href="#features"
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-black/25 px-6 py-3 text-[15px] text-white/80 backdrop-blur-sm hover:bg-black/40 hover:text-white"
-              >
-                <ScanLine size={16} />
-                Як це працює
-              </a>
+              {authState === 'guest' ? (
+                <GoogleSignInButton
+                  callbackUrl="/app"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-6 py-3 text-[15px] font-semibold text-black hover:bg-white/90"
+                />
+              ) : (
+                <a
+                  href="#features"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-black/25 px-6 py-3 text-[15px] text-white/80 backdrop-blur-sm hover:bg-black/40 hover:text-white"
+                >
+                  <ScanLine size={16} />
+                  {t('howItWorks')}
+                </a>
+              )}
             </div>
             {authState === 'anonymous' && (
               <GuestSignInButton
@@ -208,9 +220,9 @@ export default async function LandingPage() {
               />
             )}
             <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/15 pt-4 text-[12px] text-white/70">
-              <span className="inline-flex items-center gap-1.5"><Moon size={14} className="text-accent" /> Сон і відновлення</span>
-              <span className="inline-flex items-center gap-1.5"><Activity size={14} className="text-info" /> Активність</span>
-              <span className="inline-flex items-center gap-1.5"><Utensils size={14} className="text-warn" /> Харчування</span>
+              <span className="inline-flex items-center gap-1.5"><Moon size={14} className="text-accent" /> {t('sleep')}</span>
+              <span className="inline-flex items-center gap-1.5"><Activity size={14} className="text-info" /> {t('activity')}</span>
+              <span className="inline-flex items-center gap-1.5"><Utensils size={14} className="text-warn" /> {t('nutrition')}</span>
             </div>
           </div>
         </div>

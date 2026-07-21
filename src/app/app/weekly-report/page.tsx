@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {useLocale} from 'next-intl';
 import Link from 'next/link';
 import { CalendarRange, Camera, CheckCircle2, Dumbbell, Lightbulb, Loader2, Moon, Scale, Utensils } from 'lucide-react';
 
@@ -12,6 +13,7 @@ interface Report {
 }
 
 export default function WeeklyReportPage() {
+  const locale = useLocale();
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState('');
 
@@ -28,7 +30,8 @@ export default function WeeklyReportPage() {
   if (!report) return <div className="grid min-h-[55vh] place-items-center text-sm text-text-muted">{error || <span className="inline-flex items-center gap-2"><Loader2 size={17} className="animate-spin" /> Формуємо тиждень...</span>}</div>;
 
   const s = report.summary;
-  const formatDate = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+  const dateLocale = {uk: 'uk-UA', en: 'en-US', pl: 'pl-PL', de: 'de-DE'}[locale] || 'uk-UA';
+  const formatDate = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' });
   return (
     <section className="pb-8">
       <header className="mb-5 rounded-3xl border border-border bg-[linear-gradient(135deg,rgba(27,31,42,.98),rgba(12,24,26,.98))] p-5 shadow-xl shadow-black/20 sm:p-6">

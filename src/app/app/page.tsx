@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   Activity,
   BarChart3,
@@ -99,7 +100,23 @@ function formatNumber(value: number | null, suffix = ''): string {
 
 function recent<T extends { date: string }>(rows: T[], days = 14): T[] {
   const from = addDays(todayISO(), -(days - 1));
-  return rows.filter((entry) => entry.date >= from);
+  return Array.isArray(rows) ? rows.filter((entry) => entry.date >= from) : [];
+}
+
+async function fetchJson(url: string): Promise<unknown> {
+  const response = await fetch(url);
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message = body && typeof body === 'object' && 'error' in body
+      ? String(body.error)
+      : `HTTP ${response.status}`;
+    throw new Error(message);
+  }
+  return body;
+}
+
+function rowsOrEmpty<T>(value: unknown): T[] {
+  return Array.isArray(value) ? value as T[] : [];
 }
 
 function buildFallbackBalanceScores({
@@ -224,6 +241,8 @@ function buildSmartInsights({
 }
 
 export default function DashboardPage() {
+  const t = useTranslations('Dashboard');
+  const locale = useLocale();
   const [advice, setAdvice] = useState<AdviceResult | null>(null);
   const [loadingAdvice, setLoadingAdvice] = useState(true);
   const [seedingDemo, setSeedingDemo] = useState(false);
@@ -311,31 +330,37 @@ export default function DashboardPage() {
   const smartInsights = buildSmartInsights({ sleep, workouts, nutrition, weight, mood, settings });
 
   useEffect(() => {
-    setToday(new Date().toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', weekday: 'long' }));
+    setToday(new Date().toLocaleDateString(locale, { day: 'numeric', month: 'long', weekday: 'long' }));
     setTodayKey(todayISO());
     loadAll(false);
-  }, []);
+  }, [locale]);
 
   async function loadAll(force: boolean) {
     setLoadingAdvice(true);
     try {
       const [adviceRes, sleepRes, workoutsRes, nutritionRes, weightRes, moodRes, settingsRes] = await Promise.all([
-        fetch(`/api/advice${force ? '?force=true' : ''}`).then((response) => response.json()),
-        fetch('/api/sleep').then((response) => response.json()),
-        fetch('/api/workouts').then((response) => response.json()),
-        fetch('/api/nutrition').then((response) => response.json()),
-        fetch('/api/weight').then((response) => response.json()),
-        fetch('/api/mood').then((response) => response.json()),
-        fetch('/api/settings').then((response) => response.json()),
+        fetchJson(`/api/advice${force ? '?force=true' : ''}`),
+        fetchJson('/api/sleep'),
+        fetchJson('/api/workouts'),
+        fetchJson('/api/nutrition'),
+        fetchJson('/api/weight'),
+        fetchJson('/api/mood'),
+        fetchJson('/api/settings'),
       ]);
-      if (adviceRes.warning) showToast(adviceRes.warning, true);
-      setAdvice(adviceRes);
-      setSleep(sleepRes);
-      setWorkouts(workoutsRes);
-      setNutrition(nutritionRes);
-      setWeight(weightRes);
-      setMood(moodRes);
-      setSettings(settingsRes);
+      const nextAdvice = adviceRes && typeof adviceRes === 'object' && 'scores' in adviceRes
+        ? adviceRes as AdviceResult
+        : null;
+      const warning = adviceRes && typeof adviceRes === 'object' && 'warning' in adviceRes
+        ? String(adviceRes.warning)
+        : null;
+      if (warning) showToast(warning, true);
+      setAdvice(nextAdvice);
+      setSleep(rowsOrEmpty<SleepRow>(sleepRes));
+      setWorkouts(rowsOrEmpty<WorkoutRow>(workoutsRes));
+      setNutrition(rowsOrEmpty<NutritionRow>(nutritionRes));
+      setWeight(rowsOrEmpty<WeightRow>(weightRes));
+      setMood(rowsOrEmpty<MoodRow>(moodRes));
+      setSettings(settingsRes && typeof settingsRes === 'object' && !Array.isArray(settingsRes) ? settingsRes as UserSettings : null);
     } catch (e) {
       showToast('Не вдалося завантажити дашборд: ' + (e instanceof Error ? e.message : String(e)), true);
     } finally {
@@ -397,21 +422,21 @@ export default function DashboardPage() {
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-info/25 bg-info/10 px-3 py-1 text-[12px] text-info">
                 <BarChart3 size={13} />
-                {dashboardMetrics.loggedDays}/14 днів із записами
+                {t('daysLogged', { count: dashboardMetrics.loggedDays })}
               </span>
             </div>
             <h1 className="m-0 max-w-2xl text-2xl font-bold leading-tight text-text sm:text-3xl">
-              Командний центр здоров'я
+              {t('title')}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-              Зведення по сну, активності, харчуванню, тілу й настрою без зайвого шуму: що вже зроблено, що просідає і куди натиснути далі.
+              {t('subtitle')}
             </p>
 
             <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <HeroMetric icon={CheckCircle2} label="План" value={`${doneToday}/${todayItems.length}`} tone="accent" />
-              <HeroMetric icon={Flame} label="Готовність" value={heroScore === null ? '-' : `${heroScore}/100`} tone="warn" />
-              <HeroMetric icon={TrendingDown} label="Вага" value={formatNumber(dashboardMetrics.weightDelta, ' кг')} tone="info" />
-              <HeroMetric icon={Smile} label="Настрій" value={formatNumber(dashboardMetrics.avgMood, '/5')} tone="neutral" />
+              <HeroMetric icon={CheckCircle2} label={t('plan')} value={`${doneToday}/${todayItems.length}`} tone="accent" />
+              <HeroMetric icon={Flame} label={t('readiness')} value={heroScore === null ? '-' : `${heroScore}/100`} tone="warn" />
+              <HeroMetric icon={TrendingDown} label={t('weight')} value={formatNumber(dashboardMetrics.weightDelta, ' кг')} tone="info" />
+              <HeroMetric icon={Smile} label={t('mood')} value={formatNumber(dashboardMetrics.avgMood, '/5')} tone="neutral" />
             </div>
           </div>
 
@@ -436,11 +461,11 @@ export default function DashboardPage() {
             <div className="mt-4 grid grid-cols-2 gap-2">
               <Link href="/app/quick-add" className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent-strong px-3 py-3 text-[13px] font-semibold text-[#06281c]">
                 <PlusCircle size={15} />
-                Запис
+                {t('record')}
               </Link>
               <Link href="/app/trends" className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-bg-elevated px-3 py-3 text-[13px] text-text-muted hover:border-accent hover:text-accent">
                 <BarChart3 size={15} />
-                Тренди
+                {t('trends')}
               </Link>
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-bg-elevated">

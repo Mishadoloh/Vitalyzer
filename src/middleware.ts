@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isAppLocale, routing, type AppLocale } from '@/i18n/routing';
 
 const WINDOW_MS = 60_000;
 const API_LIMIT = 90;
@@ -61,11 +62,7 @@ function hitLimit(key: string, limit: number) {
   };
 }
 
-export function middleware(req: NextRequest) {
-  if (!req.nextUrl.pathname.startsWith('/api/')) {
-    return NextResponse.next();
-  }
-
+function apiMiddleware(req: NextRequest) {
   if (isWrite(req.method) && req.nextUrl.pathname !== '/api/stripe/webhook') {
     if (!isAllowedOrigin(req, req.headers.get('origin'))) {
       return NextResponse.json({ error: 'Запит із цього джерела заборонено.' }, { status: 403 });
@@ -97,6 +94,42 @@ export function middleware(req: NextRequest) {
   return response;
 }
 
+function preferredLocale(req: NextRequest): AppLocale {
+  const cookieLocale = req.cookies.get('NEXT_LOCALE')?.value;
+  if (isAppLocale(cookieLocale)) return cookieLocale;
+
+  const accepted = req.headers.get('accept-language')?.toLowerCase() || '';
+  const preferred = routing.locales.find((locale) => accepted.includes(locale));
+  return preferred || routing.defaultLocale;
+}
+
+export function middleware(req: NextRequest) {
+  if (req.nextUrl.pathname.startsWith('/api/')) {
+    return apiMiddleware(req);
+  }
+
+  const segments = req.nextUrl.pathname.split('/');
+  const pathnameLocale = segments[1];
+  const locale = isAppLocale(pathnameLocale) ? pathnameLocale : preferredLocale(req);
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-vitalyzer-locale', locale);
+
+  if (isAppLocale(pathnameLocale)) {
+    const pathname = `/${segments.slice(2).join('/')}` || '/';
+    const destination = req.nextUrl.clone();
+    destination.pathname = pathname;
+    const response = NextResponse.rewrite(destination, {request: {headers: requestHeaders}});
+    response.cookies.set('NEXT_LOCALE', locale, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: 'lax'
+    });
+    return response;
+  }
+
+  return NextResponse.next({request: {headers: requestHeaders}});
+}
+
 export const config = {
-  matcher: '/api/:path*',
+  matcher: ['/((?!_next|_vercel|.*\\..*).*)'],
 };

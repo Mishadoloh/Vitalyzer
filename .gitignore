@@ -4,6 +4,8 @@ node_modules
 .env*.local
 .env.vercel*
 *.tsbuildinfo
+*.log
+*.pid
 next-env.d.ts
 .DS_Store
 /prisma/*.db

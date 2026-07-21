@@ -1,17 +1,12 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 import Sidebar from '@/components/Sidebar';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) redirect('/');
-
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { isGuest: true, subscriptionStatus: true } });
-  const active = user?.isGuest || user?.subscriptionStatus === 'active' || user?.subscriptionStatus === 'trialing';
-  if (!active) redirect('/billing');
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#11141b_0%,#0f1115_42%,#101319_100%)]">

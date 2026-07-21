@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { Loader2, UserRound } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { showToast } from '@/lib/toast';
 
 export default function GuestSignInButton({
@@ -12,6 +13,7 @@ export default function GuestSignInButton({
   callbackUrl?: string;
   className?: string;
 }) {
+  const t = useTranslations('Common');
   const [loading, setLoading] = useState(false);
 
   async function continueAsGuest() {
@@ -23,7 +25,7 @@ export default function GuestSignInButton({
       }
       window.location.href = result?.url || callbackUrl;
     } catch (e) {
-      showToast('Не вдалося відкрити гостьовий режим: ' + (e instanceof Error ? e.message : String(e)), true);
+      showToast(t('guestError', { message: e instanceof Error ? e.message : String(e) }), true);
       setLoading(false);
     }
   }
@@ -38,7 +40,7 @@ export default function GuestSignInButton({
       }
     >
       {loading ? <Loader2 size={16} className="animate-spin" /> : <UserRound size={16} />}
-      {loading ? 'Відкриваємо...' : 'Продовжити як гість'}
+      {loading ? t('opening') : t('continueAsGuest')}
     </button>
   );
 }

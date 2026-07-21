@@ -1,0 +1,58 @@
+{
+  "Metadata": {
+    "title": "Vitalyzer — a smart layer over your health data",
+    "description": "Sleep, training and nutrition analysis with clear daily guidance."
+  },
+  "Common": {
+    "language": "Language",
+    "googleSignIn": "Continue with Google",
+    "googleUnavailable": "Google sign-in unavailable",
+    "guestMode": "Guest mode",
+    "googleConnected": "Signed in with Google",
+    "continueAsGuest": "Continue as guest",
+    "opening": "Opening...",
+    "guestError": "Could not open guest mode: {message}",
+    "privateDashboard": "private dashboard"
+  },
+  "Navigation": {
+    "dashboard": "Dashboard",
+    "overview": "Overview",
+    "quickAdd": "Quick entry",
+    "add": "Add",
+    "week": "Week",
+    "habits": "Habits",
+    "photos": "Photos",
+    "import": "Import data",
+    "goals": "Goals",
+    "trends": "Trends",
+    "history": "History",
+    "profile": "Profile",
+    "settings": "Settings",
+    "options": "Options",
+    "features": "Features",
+    "howItWorks": "How it works",
+    "pricing": "Pricing"
+  },
+  "Landing": {
+    "eyebrow": "Health insight, not another tracker",
+    "title": "A personal health tracker that explains your data",
+    "subtitle": "Vitalyzer does not replace your sleep, training or nutrition tracker. It reads the data you already collect and turns it into one clear, personal action every day.",
+    "openGuest": "Open guest mode",
+    "openApp": "Open the app",
+    "howItWorks": "How it works",
+    "sleep": "Sleep and recovery",
+    "activity": "Activity",
+    "nutrition": "Nutrition"
+  },
+  "Dashboard": {
+    "title": "Health command center",
+    "subtitle": "A calm summary of sleep, activity, nutrition, body and mood: what is done, what needs attention and what to do next.",
+    "daysLogged": "{count}/14 days logged",
+    "plan": "Plan",
+    "readiness": "Readiness",
+    "weight": "Weight",
+    "mood": "Mood",
+    "record": "Entry",
+    "trends": "Trends"
+  }
+}

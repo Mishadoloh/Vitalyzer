@@ -1,0 +1,58 @@
+{
+  "Metadata": {
+    "title": "Vitalyzer — inteligentna warstwa nad danymi zdrowotnymi",
+    "description": "Analiza snu, treningu i odżywiania z jasnymi codziennymi wskazówkami."
+  },
+  "Common": {
+    "language": "Język",
+    "googleSignIn": "Zaloguj się przez Google",
+    "googleUnavailable": "Logowanie Google niedostępne",
+    "guestMode": "Tryb gościa",
+    "googleConnected": "Zalogowano przez Google",
+    "continueAsGuest": "Kontynuuj jako gość",
+    "opening": "Otwieranie...",
+    "guestError": "Nie udało się otworzyć trybu gościa: {message}",
+    "privateDashboard": "prywatny panel"
+  },
+  "Navigation": {
+    "dashboard": "Panel",
+    "overview": "Przegląd",
+    "quickAdd": "Szybki wpis",
+    "add": "Dodaj",
+    "week": "Tydzień",
+    "habits": "Nawyki",
+    "photos": "Zdjęcia",
+    "import": "Import danych",
+    "goals": "Cele",
+    "trends": "Trendy",
+    "history": "Historia",
+    "profile": "Profil",
+    "settings": "Ustawienia",
+    "options": "Opcje",
+    "features": "Funkcje",
+    "howItWorks": "Jak to działa",
+    "pricing": "Cena"
+  },
+  "Landing": {
+    "eyebrow": "Analiza zdrowia, a nie kolejny tracker",
+    "title": "Osobisty tracker zdrowia, który wyjaśnia Twoje dane",
+    "subtitle": "Vitalyzer nie zastępuje trackera snu, treningu ani odżywiania. Czyta dane, które już zbierasz, i każdego dnia zamienia je w jedno jasne działanie.",
+    "openGuest": "Otwórz tryb gościa",
+    "openApp": "Przejdź do aplikacji",
+    "howItWorks": "Jak to działa",
+    "sleep": "Sen i regeneracja",
+    "activity": "Aktywność",
+    "nutrition": "Odżywianie"
+  },
+  "Dashboard": {
+    "title": "Centrum zdrowia",
+    "subtitle": "Spokojne podsumowanie snu, aktywności, odżywiania, ciała i nastroju: co jest zrobione, co wymaga uwagi i co zrobić dalej.",
+    "daysLogged": "{count}/14 dni z wpisami",
+    "plan": "Plan",
+    "readiness": "Gotowość",
+    "weight": "Waga",
+    "mood": "Nastrój",
+    "record": "Wpis",
+    "trends": "Trendy"
+  }
+}

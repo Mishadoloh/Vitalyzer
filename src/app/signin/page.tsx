@@ -20,7 +20,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 function SignInContent() {
   const params = useSearchParams();
   const error = params.get('error');
-  const callbackUrl = params.get('callbackUrl') || '/billing';
+  const callbackUrl = params.get('callbackUrl') || '/app';
   const guestCallbackUrl = '/app';
   const message = error ? ERROR_MESSAGES[error] || ERROR_MESSAGES.Default : null;
 

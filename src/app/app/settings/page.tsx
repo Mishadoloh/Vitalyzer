@@ -24,6 +24,7 @@ import {
 import { showToast } from '@/lib/toast';
 import type { Settings } from '@/lib/types';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
+import GoogleLogo from '@/components/GoogleLogo';
 
 type InstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -389,6 +390,15 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {!isGuest && session?.user && (
+        <div className="mb-4.5 flex items-start gap-2.5 rounded-2xl border border-accent/30 bg-accent/10 p-4 text-[13px] text-accent">
+          <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
+          <span>
+            Вхід через Google підтверджено{session.user.email ? `: ${session.user.email}` : ''}. Дані синхронізуються з вашим постійним акаунтом.
+          </span>
+        </div>
+      )}
+
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {targetSummary.map((item) => (
           <div key={item.label} className="rounded-2xl border border-border bg-bg-card p-4">
@@ -401,7 +411,10 @@ export default function SettingsPage() {
       <SettingsSection icon={UserRound} title="Акаунт і підписка" description="Статус входу, підписка та вихід з акаунта.">
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="rounded-xl border border-border bg-bg-elevated p-3">
-            <div className="text-sm font-semibold text-text">{isGuest ? 'Гостьовий режим' : userEmail}</div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-text">
+              {!isGuest && <GoogleLogo size={15} />}
+              {isGuest ? 'Гостьовий режим' : userEmail}
+            </div>
             <div className="mt-1 text-xs text-text-muted">
               {isGuest ? 'Можна тестувати застосунок без Google, але краще регулярно робити backup.' : 'Ваш акаунт прив’язаний до Google та може використовувати Stripe-підписку.'}
             </div>

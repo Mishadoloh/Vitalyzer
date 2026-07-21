@@ -1,0 +1,58 @@
+{
+  "Metadata": {
+    "title": "Vitalyzer — die intelligente Ebene über deinen Gesundheitsdaten",
+    "description": "Analyse von Schlaf, Training und Ernährung mit klaren täglichen Empfehlungen."
+  },
+  "Common": {
+    "language": "Sprache",
+    "googleSignIn": "Mit Google anmelden",
+    "googleUnavailable": "Google-Anmeldung nicht verfügbar",
+    "guestMode": "Gastmodus",
+    "googleConnected": "Mit Google angemeldet",
+    "continueAsGuest": "Als Gast fortfahren",
+    "opening": "Wird geöffnet...",
+    "guestError": "Gastmodus konnte nicht geöffnet werden: {message}",
+    "privateDashboard": "privates Dashboard"
+  },
+  "Navigation": {
+    "dashboard": "Dashboard",
+    "overview": "Übersicht",
+    "quickAdd": "Schnelleingabe",
+    "add": "Hinzufügen",
+    "week": "Woche",
+    "habits": "Gewohnheiten",
+    "photos": "Fotos",
+    "import": "Daten importieren",
+    "goals": "Ziele",
+    "trends": "Trends",
+    "history": "Verlauf",
+    "profile": "Profil",
+    "settings": "Einstellungen",
+    "options": "Optionen",
+    "features": "Funktionen",
+    "howItWorks": "So funktioniert es",
+    "pricing": "Preis"
+  },
+  "Landing": {
+    "eyebrow": "Gesundheitsanalyse statt noch eines Trackers",
+    "title": "Ein persönlicher Gesundheitstracker, der deine Daten erklärt",
+    "subtitle": "Vitalyzer ersetzt deinen Schlaf-, Trainings- oder Ernährungstracker nicht. Die bereits gesammelten Daten werden jeden Tag in eine klare, persönliche Handlung übersetzt.",
+    "openGuest": "Gastmodus öffnen",
+    "openApp": "App öffnen",
+    "howItWorks": "So funktioniert es",
+    "sleep": "Schlaf und Erholung",
+    "activity": "Aktivität",
+    "nutrition": "Ernährung"
+  },
+  "Dashboard": {
+    "title": "Gesundheitszentrale",
+    "subtitle": "Eine ruhige Übersicht über Schlaf, Aktivität, Ernährung, Körper und Stimmung: was erledigt ist, was Aufmerksamkeit braucht und was als Nächstes kommt.",
+    "daysLogged": "{count}/14 Tage erfasst",
+    "plan": "Plan",
+    "readiness": "Bereitschaft",
+    "weight": "Gewicht",
+    "mood": "Stimmung",
+    "record": "Eintrag",
+    "trends": "Trends"
+  }
+}

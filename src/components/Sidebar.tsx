@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import {
   Activity,
@@ -19,26 +21,36 @@ import {
   TrendingUp,
   UploadCloud,
   Utensils,
+  UserRound,
   X,
 } from 'lucide-react';
+import GoogleLogo from './GoogleLogo';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const NAV = [
-  { href: '/app', label: 'Дашборд', shortLabel: 'Огляд', icon: LayoutDashboard },
-  { href: '/app/quick-add', label: 'Швидкий запис', shortLabel: 'Додати', icon: PlusCircle },
-  { href: '/app/weekly-report', label: 'Тиждень', shortLabel: 'Тиждень', icon: CalendarRange },
-  { href: '/app/habits', label: 'Звички', shortLabel: 'Звички', icon: Activity },
-  { href: '/app/progress-photos', label: 'Фото', shortLabel: 'Фото', icon: Camera },
-  { href: '/app/import', label: 'Імпорт даних', shortLabel: 'Імпорт', icon: UploadCloud },
-  { href: '/app/goals', label: 'Цілі', shortLabel: 'Цілі', icon: Target },
-  { href: '/app/trends', label: 'Тренди', shortLabel: 'Тренди', icon: TrendingUp },
-  { href: '/app/history', label: 'Історія', shortLabel: 'Історія', icon: History },
-  { href: '/app/settings', label: 'Налаштування', shortLabel: 'Опції', icon: SettingsIcon },
-];
+  { href: '/app', key: 'dashboard', shortKey: 'overview', icon: LayoutDashboard },
+  { href: '/app/quick-add', key: 'quickAdd', shortKey: 'add', icon: PlusCircle },
+  { href: '/app/weekly-report', key: 'week', shortKey: 'week', icon: CalendarRange },
+  { href: '/app/habits', key: 'habits', shortKey: 'habits', icon: Activity },
+  { href: '/app/progress-photos', key: 'photos', shortKey: 'photos', icon: Camera },
+  { href: '/app/import', key: 'import', shortKey: 'import', icon: UploadCloud },
+  { href: '/app/goals', key: 'goals', shortKey: 'goals', icon: Target },
+  { href: '/app/trends', key: 'trends', shortKey: 'trends', icon: TrendingUp },
+  { href: '/app/history', key: 'history', shortKey: 'history', icon: History },
+  { href: '/app/profile', key: 'profile', shortKey: 'profile', icon: UserRound },
+  { href: '/app/settings', key: 'settings', shortKey: 'options', icon: SettingsIcon },
+] as const;
 
 export default function Sidebar() {
+  const t = useTranslations('Navigation');
+  const common = useTranslations('Common');
   const pathname = usePathname();
+  const { data: session, status } = useSession();
   const [counts, setCounts] = useState<{ sleep: number; workouts: number; nutrition: number } | null>(null);
   const [open, setOpen] = useState(false);
+  const isGuest = Boolean((session?.user as { isGuest?: boolean } | undefined)?.isGuest);
+  const googleAccount = status === 'authenticated' && !isGuest;
+  const accountName = session?.user?.name || session?.user?.email || common('guestMode');
 
   useEffect(() => {
     setOpen(false);
@@ -78,13 +90,23 @@ export default function Sidebar() {
           <span className="grid h-7 w-7 place-items-center rounded-lg bg-accent/10 text-accent">◆</span>
           <span>Vitalyzer</span>
         </div>
-        <button
-          onClick={() => setOpen((value) => !value)}
-          aria-label="Меню"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border"
-        >
-          {open ? <X size={16} /> : <Menu size={16} />}
-        </button>
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher compact />
+          <Link
+            href="/app/profile"
+            aria-label={googleAccount ? 'Вхід через Google підтверджено' : 'Гостьовий режим'}
+            className={`grid h-9 w-9 place-items-center rounded-lg border ${googleAccount ? 'border-accent/30 bg-accent/10' : 'border-border bg-bg-card'}`}
+          >
+            {googleAccount ? <GoogleLogo size={16} /> : <ShieldCheck size={15} className="text-text-muted" />}
+          </Link>
+          <button
+            onClick={() => setOpen((value) => !value)}
+            aria-label="Меню"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border"
+          >
+            {open ? <X size={16} /> : <Menu size={16} />}
+          </button>
+        </div>
       </header>
 
       {open && <div className="fixed inset-0 z-40 bg-black/55 lg:hidden" onClick={() => setOpen(false)} />}
@@ -95,13 +117,16 @@ export default function Sidebar() {
         }`}
       >
         <div className="mb-5 rounded-2xl border border-border bg-bg-card p-3">
-          <div className="flex items-center gap-2 text-lg font-bold">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-accent/10 text-accent">◆</span>
-            <span>Vitalyzer</span>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-lg font-bold">
+              <span className="grid h-8 w-8 place-items-center rounded-xl bg-accent/10 text-accent">◆</span>
+              <span>Vitalyzer</span>
+            </div>
+            <LanguageSwitcher compact />
           </div>
           <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-2.5 py-1 text-[11px] text-accent">
             <ShieldCheck size={12} />
-            приватний дашборд
+            {common('privateDashboard')}
           </div>
         </div>
         <nav className="flex flex-1 flex-col gap-1">
@@ -117,11 +142,30 @@ export default function Sidebar() {
               >
                 {active && <span className="absolute left-1 top-2 h-[calc(100%-16px)] w-[3px] rounded-full bg-accent" />}
                 <item.icon size={16} className="shrink-0" />
-                {item.label}
+                {t(item.key)}
               </Link>
             );
           })}
         </nav>
+        <Link
+          href="/app/profile"
+          className={`mb-3 flex items-center gap-2.5 rounded-xl border p-3 transition-colors hover:bg-bg-card ${
+            googleAccount ? 'border-accent/25 bg-accent/5' : 'border-border bg-bg-card/60'
+          }`}
+        >
+          <span className={`grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg ${googleAccount ? 'bg-white' : 'bg-bg-elevated text-sm font-bold text-text-muted'}`}>
+            {session?.user?.image ? (
+              <img src={session.user.image} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+            ) : googleAccount ? <GoogleLogo size={17} /> : accountName.slice(0, 1).toUpperCase()}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-xs font-semibold text-text">{accountName}</span>
+            <span className={`mt-0.5 flex items-center gap-1.5 text-[10.5px] ${googleAccount ? 'text-accent' : 'text-warn'}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${googleAccount ? 'bg-accent' : 'bg-warn'}`} />
+              {googleAccount ? common('googleConnected') : common('guestMode')}
+            </span>
+          </span>
+        </Link>
         <div className="rounded-2xl border border-border bg-bg-card p-3 text-xs text-text-muted">
           <div className="mb-3 flex items-center gap-2 font-semibold text-text">
             <Activity size={13} className="text-accent" />
@@ -163,7 +207,7 @@ export default function Sidebar() {
               }`}
             >
               <item.icon size={17} />
-              <span className="max-w-full truncate">{item.shortLabel ?? item.label}</span>
+              <span className="max-w-full truncate">{t(item.shortKey)}</span>
             </Link>
           );
         })}

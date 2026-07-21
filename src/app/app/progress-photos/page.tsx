@@ -227,10 +227,14 @@ export default function ProgressPhotosPage() {
               Вага, кг
               <input type="number" step={0.1} value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className="rounded-lg border border-border bg-bg-elevated px-3 py-2 text-text" />
             </label>
-            <label className="flex flex-col gap-1.5 text-xs text-text-muted">
-              Фото
-              <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={(e) => addPhoto(e.target.files?.[0] ?? null)} className="rounded-lg border border-border bg-bg-elevated px-3 py-2 text-sm text-text" />
-            </label>
+            <div className="flex flex-col gap-1.5 text-xs text-text-muted">
+              <span>Фото</span>
+              <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={(e) => addPhoto(e.target.files?.[0] ?? null)} hidden />
+              <button type="button" onClick={() => fileRef.current?.click()} disabled={saving} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border bg-bg-elevated px-3 py-2 text-sm font-medium text-text transition-colors hover:border-accent/60 disabled:opacity-60">
+                <ImagePlus size={15} />
+                {saving ? 'Зберігаю...' : 'Додати фото'}
+              </button>
+            </div>
           </div>
           <label className="mt-3 flex flex-col gap-1.5 text-xs text-text-muted">
             Нотатка
