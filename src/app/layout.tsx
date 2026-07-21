@@ -12,12 +12,35 @@ import generatedTranslations from '@/i18n/generated-translations.json';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('Metadata');
-  const baseUrl = process.env.NEXTAUTH_URL || 'https://vitalyzer.vercel.app';
+  const baseUrl = (process.env.NEXTAUTH_URL || 'https://vitalyzer.vercel.app').replace(/\/$/, '');
   return {
     metadataBase: new URL(baseUrl),
     applicationName: 'Vitalyzer',
     title: {default: t('title'), template: '%s · Vitalyzer'},
     description: t('description'),
+    keywords: [
+      'трекер здоров’я',
+      'сон',
+      'харчування',
+      'тренування',
+      'вага',
+      'health tracker',
+      'wellness dashboard'
+    ],
+    authors: [{name: 'Vitalyzer'}],
+    creator: 'Vitalyzer',
+    publisher: 'Vitalyzer',
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+        'max-video-preview': -1
+      }
+    },
     alternates: {
       canonical: baseUrl,
       languages: {
@@ -27,6 +50,24 @@ export async function generateMetadata(): Promise<Metadata> {
         de: `${baseUrl}/de`
       }
     },
+    openGraph: {
+      type: 'website',
+      url: baseUrl,
+      siteName: 'Vitalyzer',
+      title: t('title'),
+      description: t('description'),
+      locale: 'uk_UA',
+      images: [{url: '/vitalyzer-lifestyle-hero.png', width: 1536, height: 1024, alt: 'Vitalyzer'}]
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: t('title'),
+      description: t('description'),
+      images: ['/vitalyzer-lifestyle-hero.png']
+    },
+    verification: process.env.GOOGLE_SITE_VERIFICATION
+      ? {google: process.env.GOOGLE_SITE_VERIFICATION}
+      : undefined,
     manifest: '/manifest.webmanifest',
     appleWebApp: {capable: true, statusBarStyle: 'black-translucent', title: 'Vitalyzer'},
     formatDetection: {telephone: false},

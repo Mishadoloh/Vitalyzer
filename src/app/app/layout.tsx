@@ -1,7 +1,12 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import Sidebar from '@/components/Sidebar';
+
+export const metadata: Metadata = {
+  robots: {index: false, follow: false, noarchive: true, noimageindex: true}
+};
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);

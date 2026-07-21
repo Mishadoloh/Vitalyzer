@@ -148,10 +148,28 @@ export default async function LandingPage() {
   const t = await getTranslations('Landing');
   const nav = await getTranslations('Navigation');
   const authState = await getAuthState();
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Vitalyzer',
+    url: 'https://vitalyzer.vercel.app',
+    description: t('subtitle'),
+    applicationCategory: 'HealthApplication',
+    operatingSystem: 'Web',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD'
+    }
+  };
   const price = process.env.NEXT_PUBLIC_SUBSCRIPTION_PRICE_LABEL || '$4.99 / місяць';
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-bg text-text">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{__html: JSON.stringify(structuredData).replace(/</g, '\\u003c')}}
+      />
 
       <header className="sticky top-0 z-20 border-b border-border/60 bg-bg/70 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3.5">
