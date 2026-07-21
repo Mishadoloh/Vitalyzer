@@ -4,6 +4,59 @@ import {useEffect} from 'react';
 
 const translatedAttributes = ['aria-label', 'placeholder', 'title', 'alt'] as const;
 const blockedTags = new Set(['SCRIPT', 'STYLE', 'CODE', 'PRE']);
+const domainReplacements: Record<string, Record<string, string>> = {
+  en: {
+    'Підтримка форми': 'Weight maintenance',
+    'Схуднення': 'Weight loss',
+    'Набір маси': 'Muscle gain',
+    'Спортивний результат': 'Performance',
+    'Тренування': 'Workouts',
+    'тренування': 'workouts',
+    'Білок': 'Protein',
+    'білок': 'protein',
+    'Білки': 'Protein',
+    'Харчування': 'Nutrition',
+    'харчування': 'nutrition',
+    'Загальний прогрес': 'Overall progress',
+    'Цілі й прогрес': 'Goals and progress',
+    'Активна серія': 'Active streak',
+    'Найкращий день': 'Best day'
+  },
+  pl: {
+    'Підтримка форми': 'Utrzymanie wagi',
+    'Схуднення': 'Redukcja wagi',
+    'Набір маси': 'Budowanie masy',
+    'Спортивний результат': 'Wyniki sportowe',
+    'Тренування': 'Treningi',
+    'тренування': 'treningi',
+    'Білок': 'Białko',
+    'білок': 'białko',
+    'Білки': 'Białko',
+    'Харчування': 'Odżywianie',
+    'харчування': 'odżywianie',
+    'Загальний прогрес': 'Ogólny postęp',
+    'Цілі й прогрес': 'Cele i postęp',
+    'Активна серія': 'Aktywna seria',
+    'Найкращий день': 'Najlepszy dzień'
+  },
+  de: {
+    'Підтримка форми': 'Gewicht halten',
+    'Схуднення': 'Gewichtsabnahme',
+    'Набір маси': 'Muskelaufbau',
+    'Спортивний результат': 'Leistungssteigerung',
+    'Тренування': 'Training',
+    'тренування': 'Training',
+    'Білок': 'Protein',
+    'білок': 'Protein',
+    'Білки': 'Protein',
+    'Харчування': 'Ernährung',
+    'харчування': 'Ernährung',
+    'Загальний прогрес': 'Gesamtfortschritt',
+    'Цілі й прогрес': 'Ziele und Fortschritt',
+    'Активна серія': 'Aktive Serie',
+    'Найкращий день': 'Bester Tag'
+  }
+};
 const shortReplacements: Record<string, Record<string, string>> = {
   en: {
     'Г': 'G', 'с': 's', 'з': 'of', 'із': 'of', 'і': 'and', 'й': 'and', 'та': 'and',
@@ -44,7 +97,8 @@ export default function RuntimeTranslator({
 }) {
   useEffect(() => {
     if (locale === 'uk') return;
-    const fragments = Object.entries(dictionary)
+    const effectiveDictionary = {...dictionary, ...(domainReplacements[locale] ?? {})};
+    const fragments = Object.entries(effectiveDictionary)
       .filter(([source, translation]) => source.length >= 2 && source !== translation)
       .sort(([left], [right]) => right.length - left.length);
     const shortDictionary = shortReplacements[locale] ?? {};
@@ -52,7 +106,7 @@ export default function RuntimeTranslator({
     const translateValue = (value: string) => {
       const key = normalized(value);
       if (!key) return value;
-      const exact = dictionary[key];
+      const exact = effectiveDictionary[key];
       if (exact) return preserveOuterWhitespace(value, exact);
 
       let translated = value;
