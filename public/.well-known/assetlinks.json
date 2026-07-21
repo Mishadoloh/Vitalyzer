@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.metrivyn.mobile",
+      "sha256_cert_fingerprints": [
+        "9A:ED:28:59:55:13:BA:03:B9:5D:74:34:93:9E:0F:E6:9F:06:A6:6C:DD:B6:B9:9F:85:34:DF:C3:6A:98:1E:73"
+      ]
+    }
+  }
+]
