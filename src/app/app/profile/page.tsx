@@ -44,10 +44,10 @@ export default function ProfilePage() {
   const isGuest = Boolean((session?.user as { isGuest?: boolean } | undefined)?.isGuest);
   const isGoogle = status === 'authenticated' && !isGuest;
   const fallbackNames = {
-    uk: isGuest ? 'Гостьовий профіль' : 'Користувач Vitalyzer',
-    en: isGuest ? 'Guest profile' : 'Vitalyzer User',
-    pl: isGuest ? 'Profil gościa' : 'Użytkownik Vitalyzer',
-    de: isGuest ? 'Gastprofil' : 'Vitalyzer Nutzer'
+    uk: isGuest ? 'Гостьовий профіль' : 'Користувач Metrivyn',
+    en: isGuest ? 'Guest profile' : 'Metrivyn User',
+    pl: isGuest ? 'Profil gościa' : 'Użytkownik Metrivyn',
+    de: isGuest ? 'Gastprofil' : 'Metrivyn Nutzer'
   };
   const displayName = session?.user?.name || fallbackNames[locale as keyof typeof fallbackNames] || fallbackNames.uk;
   const initials = displayName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();

@@ -77,9 +77,9 @@ export async function buildEmailDigest(userId: string, addressOverride?: string 
   const adviceItems = Array.isArray(advice?.itemsJson) ? (advice.itemsJson as string[]) : [];
   const insight = buildInsight(adviceItems, 'Додайте кілька записів за тиждень, і звіт стане точнішим.');
 
-  const subject = `Vitalyzer: звіт за тиждень (${today})`;
+  const subject = `Metrivyn: звіт за тиждень (${today})`;
   const text = [
-    'Ваш короткий звіт Vitalyzer',
+    'Ваш короткий звіт Metrivyn',
     '',
     `Сон: ${formatValue(avgSleep, ' год')}`,
     `Тренування: ${workouts.length}`,
@@ -96,7 +96,7 @@ export async function buildEmailDigest(userId: string, addressOverride?: string 
   const html = `
     <div style="font-family:Inter,Arial,sans-serif;background:#0f1117;color:#e9eef7;padding:24px">
       <div style="max-width:620px;margin:0 auto;background:#1b1f2a;border:1px solid #2b3242;border-radius:18px;padding:22px">
-        <div style="font-size:13px;color:#5ee0b7;margin-bottom:8px">Vitalyzer</div>
+        <div style="font-size:13px;color:#5ee0b7;margin-bottom:8px">Metrivyn</div>
         <h1 style="font-size:24px;margin:0 0 8px">Ваш тижневий звіт</h1>
         <p style="color:#a8b0c2;margin:0 0 18px">Коротко про сон, активність, харчування, вагу й настрій.</p>
         <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:18px">
@@ -113,7 +113,7 @@ export async function buildEmailDigest(userId: string, addressOverride?: string 
         </div>
         <div style="background:#10251f;border:1px solid rgba(94,224,183,.35);border-radius:14px;padding:14px;color:#cdeee4">${escapeHtml(insight)}</div>
         <a href="${escapeHtml(process.env.NEXTAUTH_URL || 'http://localhost:3008')}/app" style="display:inline-block;margin-top:18px;background:#34d399;color:#06281c;text-decoration:none;font-weight:700;border-radius:10px;padding:12px 16px">Відкрити дашборд</a>
-        <p style="margin-top:18px;color:#7f899d;font-size:12px">Керувати розсилкою можна в налаштуваннях Vitalyzer.</p>
+        <p style="margin-top:18px;color:#7f899d;font-size:12px">Керувати розсилкою можна в налаштуваннях Metrivyn.</p>
       </div>
     </div>
   `;
@@ -130,7 +130,7 @@ export async function sendEmailDigest(userId: string, options: { force?: boolean
   const shouldAttachBackup = Boolean(settings.backupEmailEnabled && (options.force || backupDue));
   const attachments: ResendAttachment[] = shouldAttachBackup ? buildBackupAttachments(await getBackupData(userId)) : [];
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM || 'Vitalyzer <onboarding@resend.dev>';
+  const from = process.env.EMAIL_FROM || 'Metrivyn <onboarding@resend.dev>';
 
   if (!apiKey) {
     console.info('[email-preview]', { to: message.to, subject: message.subject, text: message.text, attachments: attachments.map((item) => item.filename) });

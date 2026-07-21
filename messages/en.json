@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "title": "Vitalyzer — a smart layer over your health data",
+    "title": "Metrivyn — a smart layer over your health data",
     "description": "Sleep, training and nutrition analysis with clear daily guidance."
   },
   "Common": {
@@ -36,7 +36,7 @@
   "Landing": {
     "eyebrow": "Health insight, not another tracker",
     "title": "A personal health tracker that explains your data",
-    "subtitle": "Vitalyzer does not replace your sleep, training or nutrition tracker. It reads the data you already collect and turns it into one clear, personal action every day.",
+    "subtitle": "Metrivyn does not replace your sleep, training or nutrition tracker. It reads the data you already collect and turns it into one clear, personal action every day.",
     "openGuest": "Open guest mode",
     "openApp": "Open the app",
     "howItWorks": "How it works",

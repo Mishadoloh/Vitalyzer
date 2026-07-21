@@ -1,6 +1,6 @@
 {
-  "name": "Vitalyzer",
-  "short_name": "Vitalyzer",
+  "name": "Metrivyn",
+  "short_name": "Metrivyn",
   "description": "Спокійний дашборд для сну, тренувань, харчування, ваги й настрою.",
   "start_url": "/app",
   "scope": "/",

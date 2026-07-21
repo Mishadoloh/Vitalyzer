@@ -88,7 +88,7 @@ export default function Sidebar() {
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-bg-elevated/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="flex items-center gap-2 text-lg font-bold">
           <span className="grid h-7 w-7 place-items-center rounded-lg bg-accent/10 text-accent">◆</span>
-          <span>Vitalyzer</span>
+          <span>Metrivyn</span>
         </div>
         <div className="flex items-center gap-2">
           <LanguageSwitcher compact />
@@ -119,7 +119,7 @@ export default function Sidebar() {
         <div className="mb-5 rounded-2xl border border-border bg-bg-card p-3">
           <div className="flex min-w-0 items-center gap-2 text-lg font-bold">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent">◆</span>
-            <span className="min-w-0 truncate">Vitalyzer</span>
+            <span className="min-w-0 truncate">Metrivyn</span>
           </div>
           <div className="mt-3"><LanguageSwitcher segmented /></div>
           <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-2.5 py-1 text-[11px] text-accent">

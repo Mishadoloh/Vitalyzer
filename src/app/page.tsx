@@ -97,7 +97,7 @@ const COMPARISON = [
 const FAQ = [
   {
     q: 'Чи потрібно відмовлятись від мого трекера сну/тренувань?',
-    a: 'Ні. Vitalyzer читає дані, які ви вже збираєте (Apple Health, Google Fit, Strava, MyFitnessPal, Garmin), і додає шар аналізу зверху.',
+    a: 'Ні. Metrivyn читає дані, які ви вже збираєте (Apple Health, Google Fit, Strava, MyFitnessPal, Garmin), і додає шар аналізу зверху.',
   },
   {
     q: 'Що з приватністю даних?',
@@ -151,7 +151,7 @@ export default async function LandingPage() {
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
-    name: 'Vitalyzer',
+    name: 'Metrivyn',
     url: 'https://vitalyzer.vercel.app',
     description: t('subtitle'),
     applicationCategory: 'HealthApplication',
@@ -175,7 +175,7 @@ export default async function LandingPage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3.5">
           <div className="flex items-center gap-2 text-lg font-bold">
             <span className="text-accent">◆</span>
-            <span>Vitalyzer</span>
+            <span>Metrivyn</span>
           </div>
           <div className="flex items-center gap-5">
             <nav className="hidden items-center gap-5 text-[13px] text-text-muted md:flex" aria-label="Головна навігація">
@@ -194,7 +194,7 @@ export default async function LandingPage() {
 
       <section className="relative flex h-[calc(100svh-112px)] min-h-[520px] max-h-[700px] items-end overflow-hidden border-b border-border/70">
         <Image
-          src="/vitalyzer-lifestyle-hero.png"
+          src="/metrivyn-lifestyle-hero.png"
           alt={t('title')}
           fill
           priority
@@ -321,7 +321,7 @@ export default async function LandingPage() {
           <div className="overflow-hidden rounded-2xl border border-border">
             <div className="grid grid-cols-[1fr_auto_auto] items-center gap-3 bg-bg-elevated px-4 py-3 text-[12px] font-semibold text-text-muted sm:gap-6 sm:px-5">
               <span />
-              <span className="text-center text-accent">Vitalyzer</span>
+              <span className="text-center text-accent">Metrivyn</span>
               <span className="text-center">Звичайний трекер</span>
             </div>
             {COMPARISON.map((row, i) => (
@@ -380,7 +380,7 @@ export default async function LandingPage() {
               Питання, які варто закрити до першого імпорту
             </h2>
             <p className="mt-4 max-w-md text-[14px] leading-7 text-text-muted">
-              Vitalyzer не просить міняти звички або переносити все вручну. Він забирає дані з уже знайомих джерел і
+              Metrivyn не просить міняти звички або переносити все вручну. Він забирає дані з уже знайомих джерел і
               перетворює їх на коротку щоденну дію.
             </p>
             <div className="mt-7 flex flex-col gap-4">
@@ -408,7 +408,7 @@ export default async function LandingPage() {
           <div>
             <div className="flex items-center justify-center gap-2 text-sm font-bold text-text sm:justify-start">
               <span className="text-accent">◆</span>
-              Vitalyzer
+              Metrivyn
             </div>
             <p className="mx-auto mt-3 max-w-sm text-center text-xs leading-6 sm:mx-0 sm:text-left">
               Один спокійний дашборд для сну, тренувань, харчування, ваги й настрою.
@@ -426,7 +426,7 @@ export default async function LandingPage() {
             </a>
           </nav>
           <div className="text-center text-xs sm:text-right">
-            <div>© {new Date().getFullYear()} Vitalyzer</div>
+            <div>© {new Date().getFullYear()} Metrivyn</div>
             <div className="mt-2 flex justify-center gap-3 text-text-muted/70 sm:justify-end">
               <a href="/privacy" className="hover:text-text">Конфіденційність</a>
               <a href="/terms" className="hover:text-text">Умови</a>

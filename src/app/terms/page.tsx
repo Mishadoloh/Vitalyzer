@@ -3,21 +3,21 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Умови використання',
-  description: 'Умови використання застосунку Vitalyzer.',
+  description: 'Умови використання застосунку Metrivyn.',
 };
 
 export default function TermsPage() {
   return (
     <main className="min-h-screen bg-bg px-5 py-12 text-text sm:py-16">
       <article className="mx-auto max-w-3xl">
-        <Link href="/" className="text-sm text-accent hover:underline">← Vitalyzer</Link>
+        <Link href="/" className="text-sm text-accent hover:underline">← Metrivyn</Link>
         <h1 className="mt-8 text-3xl font-bold sm:text-4xl">Умови використання</h1>
         <p className="mt-3 text-sm text-text-muted">Оновлено 20 липня 2026 року</p>
 
         <div className="mt-10 space-y-9 text-[15px] leading-7 text-text-muted">
           <section>
             <h2 className="text-xl font-semibold text-text">Призначення сервісу</h2>
-            <p className="mt-2">Vitalyzer допомагає організовувати особисті показники здоров’я, бачити тенденції та формувати щоденні звички. Сервіс не є медичним виробом і не замінює консультацію лікаря.</p>
+            <p className="mt-2">Metrivyn допомагає організовувати особисті показники здоров’я, бачити тенденції та формувати щоденні звички. Сервіс не є медичним виробом і не замінює консультацію лікаря.</p>
           </section>
           <section>
             <h2 className="text-xl font-semibold text-text">Акаунт</h2>

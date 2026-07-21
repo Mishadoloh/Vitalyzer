@@ -1,4 +1,4 @@
-// Vitalyzer — Prisma schema (PostgreSQL)
+// Metrivyn — Prisma schema (PostgreSQL)
 // Multi-tenant SaaS: Google sign-in (NextAuth) + Stripe subscription gating the whole app.
 
 generator client {

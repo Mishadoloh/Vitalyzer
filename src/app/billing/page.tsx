@@ -63,7 +63,7 @@ export default function BillingPage() {
           <UserRound size={28} className="mx-auto text-accent" />
           <h1 className="mt-4 text-2xl font-bold">Гостьовий режим активний</h1>
           <p className="mt-3 text-sm text-text-muted">
-            Ви можете користуватися Vitalyzer без підписки як гість. Дані зберігаються тільки в цьому тимчасовому акаунті.
+            Ви можете користуватися Metrivyn без підписки як гість. Дані зберігаються тільки в цьому тимчасовому акаунті.
           </p>
           <div className="mt-5 grid grid-cols-1 gap-3 text-left sm:grid-cols-2">
             <PlanCard title="Free" price="0$" features={FREE_FEATURES} muted />
@@ -102,7 +102,7 @@ export default function BillingPage() {
           ) : null}
           Вітаємо, {session?.user?.name}
         </div>
-        <h1 className="mt-1 text-2xl font-bold">Оберіть план Vitalyzer</h1>
+        <h1 className="mt-1 text-2xl font-bold">Оберіть план Metrivyn</h1>
         <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-text-muted">
           Free підходить, щоб спробувати застосунок. Pro потрібен для стабільного акаунта, email-звітів, автоматичного backup і повного контролю даних.
         </p>

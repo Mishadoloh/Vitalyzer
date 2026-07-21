@@ -621,7 +621,7 @@ export default function DashboardPage() {
               </span>
               <h2 className="mt-4 text-xl font-semibold text-text">Додайте перші дані, і дашборд оживе</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-                Можна внести один запис вручну, імпортувати файл або завантажити демо-дані. Після цього Vitalyzer побудує графіки, баланс тижня й щоденну пораду.
+                Можна внести один запис вручну, імпортувати файл або завантажити демо-дані. Після цього Metrivyn побудує графіки, баланс тижня й щоденну пораду.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:w-[430px]">

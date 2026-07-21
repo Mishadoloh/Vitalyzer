@@ -305,7 +305,7 @@ export default function SettingsPage() {
 
   async function installApp() {
     if (isStandalone) {
-      showToast('Vitalyzer вже відкритий як встановлений застосунок.');
+      showToast('Metrivyn вже відкритий як встановлений застосунок.');
       return;
     }
     if (!installPrompt) {
@@ -317,7 +317,7 @@ export default function SettingsPage() {
     const choice = await installPrompt.userChoice;
     setInstallPrompt(null);
     if (choice.outcome === 'accepted') {
-      showToast('Vitalyzer встановлено на пристрій.');
+      showToast('Metrivyn встановлено на пристрій.');
     } else {
       showToast('Встановлення скасовано.');
     }
@@ -449,7 +449,7 @@ export default function SettingsPage() {
         </div>
       </SettingsSection>
 
-      <SettingsSection icon={Smartphone} title="Застосунок на телефоні" description="Встановіть Vitalyzer на головний екран і відкривайте його як окремий мобільний застосунок.">
+      <SettingsSection icon={Smartphone} title="Застосунок на телефоні" description="Встановіть Metrivyn на головний екран і відкривайте його як окремий мобільний застосунок.">
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="rounded-xl border border-border bg-bg-elevated p-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-text">

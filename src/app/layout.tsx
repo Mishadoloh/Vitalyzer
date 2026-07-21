@@ -15,8 +15,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = (process.env.NEXTAUTH_URL || 'https://vitalyzer.vercel.app').replace(/\/$/, '');
   return {
     metadataBase: new URL(baseUrl),
-    applicationName: 'Vitalyzer',
-    title: {default: t('title'), template: '%s · Vitalyzer'},
+    applicationName: 'Metrivyn',
+    title: {default: t('title'), template: '%s · Metrivyn'},
     description: t('description'),
     keywords: [
       'трекер здоров’я',
@@ -27,9 +27,9 @@ export async function generateMetadata(): Promise<Metadata> {
       'health tracker',
       'wellness dashboard'
     ],
-    authors: [{name: 'Vitalyzer'}],
-    creator: 'Vitalyzer',
-    publisher: 'Vitalyzer',
+    authors: [{name: 'Metrivyn'}],
+    creator: 'Metrivyn',
+    publisher: 'Metrivyn',
     robots: {
       index: true,
       follow: true,
@@ -53,23 +53,23 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       type: 'website',
       url: baseUrl,
-      siteName: 'Vitalyzer',
+      siteName: 'Metrivyn',
       title: t('title'),
       description: t('description'),
       locale: 'uk_UA',
-      images: [{url: '/vitalyzer-lifestyle-hero.png', width: 1536, height: 1024, alt: 'Vitalyzer'}]
+      images: [{url: '/metrivyn-lifestyle-hero.png', width: 1536, height: 1024, alt: 'Metrivyn'}]
     },
     twitter: {
       card: 'summary_large_image',
       title: t('title'),
       description: t('description'),
-      images: ['/vitalyzer-lifestyle-hero.png']
+      images: ['/metrivyn-lifestyle-hero.png']
     },
     verification: process.env.GOOGLE_SITE_VERIFICATION
       ? {google: process.env.GOOGLE_SITE_VERIFICATION}
       : undefined,
     manifest: '/manifest.webmanifest',
-    appleWebApp: {capable: true, statusBarStyle: 'black-translucent', title: 'Vitalyzer'},
+    appleWebApp: {capable: true, statusBarStyle: 'black-translucent', title: 'Metrivyn'},
     formatDetection: {telephone: false},
     icons: {
       icon: [{url: '/icon.svg', type: 'image/svg+xml'}],

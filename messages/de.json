@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "title": "Vitalyzer — die intelligente Ebene über deinen Gesundheitsdaten",
+    "title": "Metrivyn — die intelligente Ebene über deinen Gesundheitsdaten",
     "description": "Analyse von Schlaf, Training und Ernährung mit klaren täglichen Empfehlungen."
   },
   "Common": {
@@ -36,7 +36,7 @@
   "Landing": {
     "eyebrow": "Gesundheitsanalyse statt noch eines Trackers",
     "title": "Ein persönlicher Gesundheitstracker, der deine Daten erklärt",
-    "subtitle": "Vitalyzer ersetzt deinen Schlaf-, Trainings- oder Ernährungstracker nicht. Die bereits gesammelten Daten werden jeden Tag in eine klare, persönliche Handlung übersetzt.",
+    "subtitle": "Metrivyn ersetzt deinen Schlaf-, Trainings- oder Ernährungstracker nicht. Die bereits gesammelten Daten werden jeden Tag in eine klare, persönliche Handlung übersetzt.",
     "openGuest": "Gastmodus öffnen",
     "openApp": "App öffnen",
     "howItWorks": "So funktioniert es",

@@ -33,7 +33,7 @@ function SignInContent() {
       <div className="relative w-full max-w-sm rounded-2xl border border-border bg-gradient-to-br from-bg-card to-bg-elevated p-8 text-center shadow-2xl shadow-black/40">
         <div className="mb-1 flex items-center justify-center gap-2 text-lg font-bold">
           <span className="text-accent">◆</span>
-          <span>Vitalyzer</span>
+          <span>Metrivyn</span>
         </div>
         <h1 className="mt-4 text-xl font-bold">Увійдіть, щоб продовжити</h1>
         <p className="mt-2 text-[13px] text-text-muted">Один Google-акаунт — і ваш дашборд здоровʼя вже чекає.</p>

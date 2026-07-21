@@ -147,7 +147,7 @@ export default function ImportPage() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `vitalyzer-${type}-template.csv`;
+    anchor.download = `metrivyn-${type}-template.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
   }

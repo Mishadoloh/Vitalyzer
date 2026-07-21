@@ -13,7 +13,7 @@ export async function GET() {
   return new NextResponse(JSON.stringify(backup, null, 2), {
     headers: {
       'content-type': 'application/json',
-      'content-disposition': `attachment; filename="vitalyzer-backup-${new Date().toISOString().slice(0, 10)}.json"`,
+      'content-disposition': `attachment; filename="metrivyn-backup-${new Date().toISOString().slice(0, 10)}.json"`,
     },
   });
 }

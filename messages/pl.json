@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "title": "Vitalyzer — inteligentna warstwa nad danymi zdrowotnymi",
+    "title": "Metrivyn — inteligentna warstwa nad danymi zdrowotnymi",
     "description": "Analiza snu, treningu i odżywiania z jasnymi codziennymi wskazówkami."
   },
   "Common": {
@@ -36,7 +36,7 @@
   "Landing": {
     "eyebrow": "Analiza zdrowia, a nie kolejny tracker",
     "title": "Osobisty tracker zdrowia, który wyjaśnia Twoje dane",
-    "subtitle": "Vitalyzer nie zastępuje trackera snu, treningu ani odżywiania. Czyta dane, które już zbierasz, i każdego dnia zamienia je w jedno jasne działanie.",
+    "subtitle": "Metrivyn nie zastępuje trackera snu, treningu ani odżywiania. Czyta dane, które już zbierasz, i każdego dnia zamienia je w jedno jasne działanie.",
     "openGuest": "Otwórz tryb gościa",
     "openApp": "Przejdź do aplikacji",
     "howItWorks": "Jak to działa",

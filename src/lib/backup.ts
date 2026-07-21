@@ -60,11 +60,11 @@ export function buildBackupAttachments(backup: Awaited<ReturnType<typeof getBack
 
   return [
     {
-      filename: `vitalyzer-backup-${date}.json`,
+      filename: `metrivyn-backup-${date}.json`,
       content: Buffer.from(JSON.stringify(backup, null, 2), 'utf8').toString('base64'),
     },
     ...Object.entries(rows).map(([type, data]) => ({
-      filename: `vitalyzer-${type}-${date}.csv`,
+      filename: `metrivyn-${type}-${date}.csv`,
       content: Buffer.from(rowsToCsv(type as EntryType, data), 'utf8').toString('base64'),
     })),
   ];

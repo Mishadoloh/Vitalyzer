@@ -296,7 +296,7 @@ export default function ProgressPhotosPage() {
                     </button>
                   </div>
                   {photo.note && <p className="mt-2 text-xs leading-5 text-text-muted">{photo.note}</p>}
-                  <a href={photo.url} download={`vitalyzer-photo-${photo.date}.jpg`} className="mt-3 inline-flex items-center gap-1 text-xs text-accent underline">
+                  <a href={photo.url} download={`metrivyn-photo-${photo.date}.jpg`} className="mt-3 inline-flex items-center gap-1 text-xs text-accent underline">
                     <Download size={13} />
                     завантажити
                   </a>

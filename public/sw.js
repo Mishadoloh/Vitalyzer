@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vitalyzer-shell-v2';
+const CACHE_NAME = 'metrivyn-shell-v3';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE_URLS = ['/manifest.webmanifest', '/icon.svg', OFFLINE_URL];
 
