@@ -150,17 +150,31 @@ export default async function LandingPage() {
   const authState = await getAuthState();
   const structuredData = {
     '@context': 'https://schema.org',
-    '@type': 'WebApplication',
-    name: 'Metrivyn',
-    url: 'https://vitalyzer.vercel.app',
-    description: t('subtitle'),
-    applicationCategory: 'HealthApplication',
-    operatingSystem: 'Web',
-    offers: {
-      '@type': 'Offer',
-      price: '0',
-      priceCurrency: 'USD'
-    }
+    '@graph': [
+      {
+        '@type': 'WebSite',
+        '@id': 'https://vitalyzer.vercel.app/#website',
+        url: 'https://vitalyzer.vercel.app/',
+        name: 'Metrivyn',
+        alternateName: 'Metrivyn Health',
+        inLanguage: ['uk', 'en', 'pl', 'de']
+      },
+      {
+        '@type': 'WebApplication',
+        '@id': 'https://vitalyzer.vercel.app/#application',
+        name: 'Metrivyn',
+        url: 'https://vitalyzer.vercel.app/',
+        description: t('subtitle'),
+        applicationCategory: 'HealthApplication',
+        operatingSystem: 'Web',
+        isPartOf: {'@id': 'https://vitalyzer.vercel.app/#website'},
+        offers: {
+          '@type': 'Offer',
+          price: '0',
+          priceCurrency: 'USD'
+        }
+      }
+    ]
   };
   const price = process.env.NEXT_PUBLIC_SUBSCRIPTION_PRICE_LABEL || '$4.99 / місяць';
 
