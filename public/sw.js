@@ -1,4 +1,4 @@
-const CACHE_NAME = 'metrivyn-shell-v4';
+const CACHE_NAME = 'metrivyn-shell-v5';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE_URLS = [
   '/manifest.webmanifest',
@@ -36,7 +36,14 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
+    event.respondWith(
+      fetch(request).catch(async () => {
+        // A deployment or a brief mobile network switch can fail one request.
+        // Retry once before replacing the requested page with the offline shell.
+        await new Promise((resolve) => setTimeout(resolve, 900));
+        return fetch(request).catch(() => caches.match(OFFLINE_URL));
+      })
+    );
     return;
   }
 

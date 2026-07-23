@@ -37,24 +37,64 @@
       }
       h1 { margin: 0; font-size: 24px; line-height: 1.2; }
       p { color: #9aa4b5; line-height: 1.6; margin: 12px 0 0; }
-      a {
+      button {
         display: inline-flex;
+        align-items: center;
+        gap: 8px;
         margin-top: 20px;
+        border: 0;
         border-radius: 12px;
         background: #34d399;
         color: #06281c;
+        font: inherit;
         font-weight: 700;
-        text-decoration: none;
         padding: 12px 16px;
+        cursor: pointer;
       }
+      button:disabled { cursor: wait; opacity: .72; }
+      .status { min-height: 20px; font-size: 13px; }
     </style>
   </head>
   <body>
     <main>
       <div class="mark">◆</div>
       <h1>Немає з'єднання</h1>
-      <p>Metrivyn не може завантажити свіжі дані. Перевірте інтернет і відкрийте застосунок ще раз.</p>
-      <a href="/app">Спробувати знову</a>
+      <p>Metrivyn не може завантажити свіжі дані. Сторінка відкриється автоматично, щойно зв'язок відновиться.</p>
+      <p id="status" class="status" role="status">Очікуємо на мережу…</p>
+      <button id="retry" type="button">Спробувати знову</button>
     </main>
+    <script>
+      const retryButton = document.getElementById('retry');
+      const status = document.getElementById('status');
+      let checking = false;
+
+      async function reconnect() {
+        if (checking) return;
+        checking = true;
+        retryButton.disabled = true;
+        status.textContent = 'Перевіряємо з’єднання…';
+
+        try {
+          const response = await fetch('/api/health?offline-check=' + Date.now(), {
+            cache: 'no-store',
+            credentials: 'same-origin'
+          });
+          if (!response.ok) throw new Error('Health check failed');
+          status.textContent = 'З’єднання відновлено. Відкриваємо…';
+          window.location.reload();
+          return;
+        } catch {
+          status.textContent = 'Мережа ще недоступна. Спробуємо знову автоматично.';
+        } finally {
+          checking = false;
+          retryButton.disabled = false;
+        }
+      }
+
+      retryButton.addEventListener('click', reconnect);
+      window.addEventListener('online', reconnect);
+      setInterval(reconnect, 5000);
+      setTimeout(reconnect, 500);
+    </script>
   </body>
 </html>
