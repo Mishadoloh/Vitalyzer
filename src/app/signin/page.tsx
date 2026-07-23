@@ -9,6 +9,7 @@ import GuestSignInButton from '@/components/GuestSignInButton';
 const ERROR_MESSAGES: Record<string, string> = {
   Configuration: 'Google-вхід тимчасово недоступний. Скористайтеся гостьовим режимом або спробуйте пізніше.',
   AccessDenied: 'Доступ відхилено. Спробуйте увійти іншим Google-акаунтом.',
+  AccountSuspended: 'Цей акаунт тимчасово заблоковано адміністратором. Зверніться до підтримки для відновлення доступу.',
   OAuthSignin: 'Не вдалося розпочати вхід через Google. Спробуйте ще раз або скористайтеся гостьовим режимом.',
   OAuthCallback: 'Помилка під час обробки відповіді від Google. Спробуйте ще раз.',
   OAuthCreateAccount: 'Не вдалося створити акаунт на основі даних Google. Спробуйте ще раз.',

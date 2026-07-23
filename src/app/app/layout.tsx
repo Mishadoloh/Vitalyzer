@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { hasSuspensionMarker, SUSPENSION_PROVIDER } from '@/lib/user-access';
 import Sidebar from '@/components/Sidebar';
 
 export const metadata: Metadata = {
@@ -12,6 +14,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) redirect('/');
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      accounts: { where: { provider: SUSPENSION_PROVIDER }, select: { provider: true } },
+    },
+  });
+  if (!user) redirect('/signin');
+  if (hasSuspensionMarker(user)) redirect('/signin?error=AccountSuspended');
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#11141b_0%,#0f1115_42%,#101319_100%)]">

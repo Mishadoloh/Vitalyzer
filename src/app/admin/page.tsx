@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth';
 import {
   Activity,
   ArrowLeft,
+  Ban,
   BarChart3,
   Camera,
   CheckCircle2,
@@ -20,9 +21,12 @@ import {
   Users,
   Utensils,
 } from 'lucide-react';
+import type { Prisma } from '@prisma/client';
+import AdminUserActions from '@/components/AdminUserActions';
 import { authOptions } from '@/lib/auth';
 import { isAdminEmail } from '@/lib/admin-access';
 import { prisma } from '@/lib/prisma';
+import { hasSuspensionMarker, SUSPENSION_PROVIDER } from '@/lib/user-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,8 +36,10 @@ export const metadata: Metadata = {
 };
 
 type AdminPageProps = {
-  searchParams?: { q?: string };
+  searchParams?: { q?: string; filter?: string };
 };
+
+type UserFilter = 'all' | 'guest' | 'pro' | 'suspended';
 
 function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -47,25 +53,59 @@ function formatDate(date: Date): string {
   }).format(date);
 }
 
-function accountLabel(user: { isGuest: boolean; subscriptionStatus: string | null }): string {
+function accountLabel(user: { isGuest: boolean; accounts: Array<{ provider: string }>; subscriptionStatus: string | null }): string {
+  if (hasSuspensionMarker(user)) return 'Заблоковано';
   if (user.isGuest) return 'Гість';
   if (user.subscriptionStatus === 'active') return 'Pro';
   if (user.subscriptionStatus === 'trialing') return 'Trial';
   return 'Free';
 }
 
-function accountTone(user: { isGuest: boolean; subscriptionStatus: string | null }): string {
+function accountTone(user: { isGuest: boolean; accounts: Array<{ provider: string }>; subscriptionStatus: string | null }): string {
+  if (hasSuspensionMarker(user)) return 'border-danger/25 bg-danger/10 text-danger';
   if (user.subscriptionStatus === 'active') return 'border-accent/25 bg-accent/10 text-accent';
   if (user.subscriptionStatus === 'trialing') return 'border-info/25 bg-info/10 text-info';
   if (user.isGuest) return 'border-warn/25 bg-warn/10 text-warn';
   return 'border-border bg-bg-elevated text-text-muted';
 }
 
+function accountPlan(user: { subscriptionStatus: string | null }): 'free' | 'trial' | 'pro' {
+  if (user.subscriptionStatus === 'active') return 'pro';
+  if (user.subscriptionStatus === 'trialing') return 'trial';
+  return 'free';
+}
+
 export default async function AdminPage({ searchParams }: AdminPageProps) {
   const session = await getServerSession(authOptions);
   if (!isAdminEmail(session?.user?.email)) redirect('/app');
+  const adminId = (session?.user as { id?: string } | undefined)?.id;
+  if (!adminId) redirect('/app');
 
   const query = String(searchParams?.q || '').trim().slice(0, 80);
+  const requestedFilter = String(searchParams?.filter || 'all');
+  const filter: UserFilter = ['guest', 'pro', 'suspended'].includes(requestedFilter)
+    ? requestedFilter as UserFilter
+    : 'all';
+  const filters: Prisma.UserWhereInput[] = [];
+  if (query) {
+    filters.push({
+      OR: [
+        { name: { contains: query, mode: 'insensitive' } },
+        { email: { contains: query, mode: 'insensitive' } },
+      ],
+    });
+  }
+  if (filter === 'guest') filters.push({ isGuest: true });
+  if (filter === 'pro') filters.push({ subscriptionStatus: 'active' });
+  if (filter === 'suspended') filters.push({ accounts: { some: { provider: SUSPENSION_PROVIDER } } });
+  const userWhere: Prisma.UserWhereInput | undefined = filters.length ? { AND: filters } : undefined;
+  const filterHref = (nextFilter: UserFilter) => {
+    const params = new URLSearchParams();
+    if (query) params.set('q', query);
+    if (nextFilter !== 'all') params.set('filter', nextFilter);
+    const suffix = params.toString();
+    return suffix ? `/admin?${suffix}` : '/admin';
+  };
   const now = new Date();
   const weekAgo = new Date(now);
   weekAgo.setDate(weekAgo.getDate() - 7);
@@ -78,6 +118,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     totalUsers,
     googleUsers,
     guestUsers,
+    proUsers,
+    suspendedUsers,
     newUsers,
     sleepCount,
     workoutCount,
@@ -97,6 +139,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     prisma.user.count(),
     prisma.user.count({ where: { isGuest: false, email: { not: null } } }),
     prisma.user.count({ where: { isGuest: true } }),
+    prisma.user.count({ where: { subscriptionStatus: 'active' } }),
+    prisma.user.count({ where: { accounts: { some: { provider: SUSPENSION_PROVIDER } } } }),
     prisma.user.count({ where: { createdAt: { gte: weekAgo } } }),
     prisma.sleepEntry.count(),
     prisma.workoutEntry.count(),
@@ -106,14 +150,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     prisma.progressPhoto.count(),
     prisma.syncedHabitState.count(),
     prisma.user.findMany({
-      where: query
-        ? {
-            OR: [
-              { name: { contains: query, mode: 'insensitive' } },
-              { email: { contains: query, mode: 'insensitive' } },
-            ],
-          }
-        : undefined,
+      where: userWhere,
       orderBy: { createdAt: 'desc' },
       take: 24,
       select: {
@@ -122,6 +159,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         email: true,
         image: true,
         isGuest: true,
+        accounts: { where: { provider: SUSPENSION_PROVIDER }, select: { provider: true } },
         createdAt: true,
         subscriptionStatus: true,
         _count: {
@@ -225,7 +263,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           <StatCard icon={Users} label="Усі користувачі" value={totalUsers} detail={`+${newUsers} за 7 днів`} tone="accent" />
           <StatCard icon={Activity} label="Активні за 7 днів" value={activeUsers} detail={`${dataCoverage}% від усіх`} tone="info" />
           <StatCard icon={Database} label="Записів здоров’я" value={totalRecords} detail={`${photoCount} фото прогресу`} tone="warn" />
-          <StatCard icon={CheckCircle2} label="Google-акаунти" value={googleUsers} detail={`${guestUsers} гостьових`} tone="neutral" />
+          <StatCard icon={CheckCircle2} label="Google-акаунти" value={googleUsers} detail={`${proUsers} Pro · ${guestUsers} гостей`} tone="neutral" />
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)]">
@@ -294,12 +332,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </div>
 
           <div className="rounded-lg border border-border bg-bg-card">
-            <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div className="border-b border-border p-4 sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-sm font-semibold">Користувачі</h2>
-                <p className="mt-1 text-xs text-text-muted">Останні акаунти та обсяг їхніх даних</p>
+                <p className="mt-1 text-xs text-text-muted">Пошук, плани, статус доступу та повне керування даними</p>
               </div>
               <form className="relative w-full sm:w-72" action="/admin" method="get">
+                {filter !== 'all' && <input type="hidden" name="filter" value={filter} />}
                 <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
                 <input
                   name="q"
@@ -308,6 +348,29 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   className="h-10 w-full rounded-lg border border-border bg-bg-elevated pl-9 pr-3 text-sm outline-none placeholder:text-text-muted focus:border-accent/50"
                 />
               </form>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {([
+                  ['all', 'Усі', totalUsers],
+                  ['guest', 'Гості', guestUsers],
+                  ['pro', 'Pro', proUsers],
+                  ['suspended', 'Заблоковані', suspendedUsers],
+                ] as const).map(([value, label, count]) => (
+                  <Link
+                    key={value}
+                    href={filterHref(value)}
+                    className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs transition-colors ${
+                      filter === value
+                        ? 'border-accent/30 bg-accent/10 text-accent'
+                        : 'border-border bg-bg-elevated text-text-muted hover:border-accent/25 hover:text-text'
+                    }`}
+                  >
+                    {value === 'suspended' && <Ban size={13} />}
+                    {label}
+                    <span className="rounded-full bg-black/15 px-1.5 py-0.5 text-[10px]">{count}</span>
+                  </Link>
+                ))}
+              </div>
             </div>
 
             {recentUsers.length ? (
@@ -319,7 +382,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         <th className="px-5 py-3 font-medium">Користувач</th>
                         <th className="px-3 py-3 font-medium">План</th>
                         <th className="px-3 py-3 font-medium">Дані</th>
-                        <th className="px-5 py-3 text-right font-medium">Створено</th>
+                        <th className="px-3 py-3 font-medium">Створено</th>
+                        <th className="px-5 py-3 text-right font-medium">Керування</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -339,7 +403,17 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                               <b>{records}</b>
                               <span className="ml-1 text-text-muted">+ {user._count.progressPhotos} фото</span>
                             </td>
-                            <td className="px-5 py-3 text-right text-text-muted">{formatDate(user.createdAt)}</td>
+                            <td className="px-3 py-3 text-text-muted">{formatDate(user.createdAt)}</td>
+                            <td className="px-5 py-3">
+                              <div className="flex justify-end">
+                                <AdminUserActions
+                                  userId={user.id}
+                                  isSuspended={hasSuspensionMarker(user)}
+                                  isSelf={user.id === adminId}
+                                  plan={accountPlan(user)}
+                                />
+                              </div>
+                            </td>
                           </tr>
                         );
                       })}
@@ -361,6 +435,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         <div className="mt-3 flex items-center justify-between gap-3 text-xs text-text-muted">
                           <span>{records} записів · {user._count.progressPhotos} фото</span>
                           <span>{formatDate(user.createdAt)}</span>
+                        </div>
+                        <div className="mt-3 border-t border-border/70 pt-3">
+                          <AdminUserActions
+                            userId={user.id}
+                            isSuspended={hasSuspensionMarker(user)}
+                            isSelf={user.id === adminId}
+                            plan={accountPlan(user)}
+                          />
                         </div>
                       </div>
                     );

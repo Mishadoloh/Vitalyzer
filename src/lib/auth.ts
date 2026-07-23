@@ -4,6 +4,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import type { NextAuthOptions } from 'next-auth';
 import { prisma } from './prisma';
 import { isAdminEmail } from './admin-access';
+import { SUSPENSION_PROVIDER } from './user-access';
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
@@ -71,7 +72,16 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ account, profile }) {
       if (account?.provider !== 'google') return true;
-      return (profile as { email_verified?: boolean } | undefined)?.email_verified === true;
+      const googleProfile = profile as { email?: string; email_verified?: boolean } | undefined;
+      if (googleProfile?.email_verified !== true) return false;
+      if (!googleProfile.email) return true;
+      const existingUser = await prisma.user.findUnique({
+        where: { email: googleProfile.email },
+        select: {
+          accounts: { where: { provider: SUSPENSION_PROVIDER }, select: { id: true } },
+        },
+      });
+      return existingUser?.accounts.length !== 1;
     },
     async jwt({ token, user, account, profile }) {
       if (user) {
