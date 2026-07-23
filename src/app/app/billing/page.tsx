@@ -30,6 +30,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
   const status = user?.subscriptionStatus || 'inactive';
   const isPro = ACTIVE_STATUSES.has(status);
   const isGuest = user?.isGuest ?? true;
+  const shouldManage = Boolean(
+    user?.stripeCustomerId && ['active', 'trialing', 'past_due', 'incomplete'].includes(status),
+  );
   const statusKey = ['active', 'trialing', 'past_due', 'canceled', 'incomplete'].includes(status)
     ? status
     : 'inactive';
@@ -142,8 +145,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             </ul>
             <BillingActions
               isGuest={isGuest}
-              isPro={isPro}
-              canManage={Boolean(user?.stripeCustomerId)}
+              shouldManage={shouldManage}
             />
           </article>
         </div>

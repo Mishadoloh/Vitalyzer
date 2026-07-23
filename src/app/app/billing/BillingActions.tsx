@@ -8,8 +8,7 @@ import { showToast } from '@/lib/toast';
 
 type BillingActionsProps = {
   isGuest: boolean;
-  isPro: boolean;
-  canManage: boolean;
+  shouldManage: boolean;
 };
 
 async function readResponse(response: Response): Promise<{ error?: string; url?: string }> {
@@ -22,7 +21,7 @@ async function readResponse(response: Response): Promise<{ error?: string; url?:
   }
 }
 
-export default function BillingActions({ isGuest, isPro, canManage }: BillingActionsProps) {
+export default function BillingActions({ isGuest, shouldManage }: BillingActionsProps) {
   const t = useTranslations('Billing');
   const [loading, setLoading] = useState<'checkout' | 'portal' | null>(null);
 
@@ -52,7 +51,7 @@ export default function BillingActions({ isGuest, isPro, canManage }: BillingAct
     );
   }
 
-  if (isPro || canManage) {
+  if (shouldManage) {
     return (
       <button
         type="button"
