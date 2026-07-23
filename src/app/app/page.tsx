@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
@@ -338,15 +338,13 @@ export default function DashboardPage() {
   async function loadAll(force: boolean) {
     setLoadingAdvice(true);
     try {
-      const [adviceRes, sleepRes, workoutsRes, nutritionRes, weightRes, moodRes, settingsRes] = await Promise.all([
+      const [adviceRes, dashboardRes] = await Promise.all([
         fetchJson(`/api/advice${force ? '?force=true' : ''}`),
-        fetchJson('/api/sleep'),
-        fetchJson('/api/workouts'),
-        fetchJson('/api/nutrition'),
-        fetchJson('/api/weight'),
-        fetchJson('/api/mood'),
-        fetchJson('/api/settings'),
+        fetchJson('/api/dashboard-data'),
       ]);
+      const dashboard = dashboardRes && typeof dashboardRes === 'object'
+        ? dashboardRes as Record<string, unknown>
+        : {};
       const nextAdvice = adviceRes && typeof adviceRes === 'object' && 'scores' in adviceRes
         ? adviceRes as AdviceResult
         : null;
@@ -355,12 +353,12 @@ export default function DashboardPage() {
         : null;
       if (warning) showToast(warning, true);
       setAdvice(nextAdvice);
-      setSleep(rowsOrEmpty<SleepRow>(sleepRes));
-      setWorkouts(rowsOrEmpty<WorkoutRow>(workoutsRes));
-      setNutrition(rowsOrEmpty<NutritionRow>(nutritionRes));
-      setWeight(rowsOrEmpty<WeightRow>(weightRes));
-      setMood(rowsOrEmpty<MoodRow>(moodRes));
-      setSettings(settingsRes && typeof settingsRes === 'object' && !Array.isArray(settingsRes) ? settingsRes as UserSettings : null);
+      setSleep(rowsOrEmpty<SleepRow>(dashboard.sleep));
+      setWorkouts(rowsOrEmpty<WorkoutRow>(dashboard.workouts));
+      setNutrition(rowsOrEmpty<NutritionRow>(dashboard.nutrition));
+      setWeight(rowsOrEmpty<WeightRow>(dashboard.weight));
+      setMood(rowsOrEmpty<MoodRow>(dashboard.mood));
+      setSettings(dashboard.settings && typeof dashboard.settings === 'object' && !Array.isArray(dashboard.settings) ? dashboard.settings as UserSettings : null);
     } catch (e) {
       showToast('Не вдалося завантажити дашборд: ' + (e instanceof Error ? e.message : String(e)), true);
     } finally {
@@ -675,22 +673,22 @@ export default function DashboardPage() {
 
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
         <ChartCard title="Сон, год (14 днів)" empty={!loadingAdvice && sleep.length === 0} actionHref="/app/quick-add">
-          <SleepChart sleepAll={sleep} target={settings?.sleepTarget ?? 8} />
+          <LazyChart><SleepChart sleepAll={sleep} target={settings?.sleepTarget ?? 8} /></LazyChart>
         </ChartCard>
         <ChartCard title="Тренувальне навантаження (14 днів)" empty={!loadingAdvice && workouts.length === 0} actionHref="/app/quick-add">
-          <WorkoutChart workoutsAll={workouts} />
+          <LazyChart><WorkoutChart workoutsAll={workouts} /></LazyChart>
         </ChartCard>
         <ChartCard title="Калорії та білок (14 днів)" empty={!loadingAdvice && nutrition.length === 0} actionHref="/app/quick-add">
-          <NutritionChart nutritionAll={nutrition} />
+          <LazyChart><NutritionChart nutritionAll={nutrition} /></LazyChart>
         </ChartCard>
         <ChartCard title="Тижневий баланс" empty={!loadingAdvice && !hasBalanceScore} actionHref="/app/quick-add">
-          <BalanceChart scores={balanceScores} />
+          <LazyChart><BalanceChart scores={balanceScores} /></LazyChart>
         </ChartCard>
         <ChartCard title="Вага (14 днів)" empty={!loadingAdvice && weight.length === 0} actionHref="/app/quick-add">
-          <WeightChart weightAll={weight} days={14} />
+          <LazyChart><WeightChart weightAll={weight} days={14} /></LazyChart>
         </ChartCard>
         <ChartCard title="Настрій та енергія (14 днів)" empty={!loadingAdvice && mood.length === 0} actionHref="/app/quick-add">
-          <MoodChart moodAll={mood} days={14} />
+          <LazyChart><MoodChart moodAll={mood} days={14} /></LazyChart>
         </ChartCard>
       </div>
     </section>
@@ -878,4 +876,32 @@ function ChartLoading() {
       </div>
     </div>
   );
+}
+
+function LazyChart({ children }: { children: React.ReactNode }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || visible) return;
+    if (!('IntersectionObserver' in window)) {
+      setVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '240px 0px' }
+    );
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, [visible]);
+
+  return <div ref={rootRef}>{visible ? children : <ChartLoading />}</div>;
 }

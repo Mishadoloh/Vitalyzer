@@ -61,24 +61,24 @@ export default function Sidebar() {
     async function load() {
       if (document.visibilityState === 'hidden') return;
       try {
-        const [sleep, workouts, nutrition] = await Promise.all([
-          fetch('/api/sleep').then((response) => response.json()),
-          fetch('/api/workouts').then((response) => response.json()),
-          fetch('/api/nutrition').then((response) => response.json()),
-        ]);
+        const response = await fetch('/api/sidebar-summary');
+        if (!response.ok) return;
+        const summary = await response.json() as { sleep?: number; workouts?: number; nutrition?: number };
         if (!cancelled) {
-          setCounts({ sleep: sleep.length, workouts: workouts.length, nutrition: nutrition.length });
+          setCounts({
+            sleep: Number(summary.sleep) || 0,
+            workouts: Number(summary.workouts) || 0,
+            nutrition: Number(summary.nutrition) || 0,
+          });
         }
       } catch {
         // Sidebar summary is non-critical.
       }
     }
     load();
-    const interval = setInterval(load, 30000);
     document.addEventListener('visibilitychange', load);
     return () => {
       cancelled = true;
-      clearInterval(interval);
       document.removeEventListener('visibilitychange', load);
     };
   }, [pathname]);
