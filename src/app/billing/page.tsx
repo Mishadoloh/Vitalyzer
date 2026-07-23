@@ -30,8 +30,9 @@ export default function BillingPage() {
     setLoading(true);
     try {
       const res = await fetch('/api/stripe/checkout', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Не вдалося створити сесію оплати');
+      const data = await res.json().catch(() => null) as { error?: string; url?: string } | null;
+      if (!res.ok) throw new Error(data?.error || 'Не вдалося створити сесію оплати');
+      if (!data?.url) throw new Error('Stripe не повернув адресу сторінки оплати');
       window.location.href = data.url;
     } catch (e) {
       showToast(e instanceof Error ? e.message : String(e), true);
