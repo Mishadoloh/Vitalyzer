@@ -81,8 +81,8 @@ export async function POST(req: NextRequest) {
       client_reference_id: userId,
       line_items: [{ price: subscriptionPrice.id, quantity: 1 }],
       subscription_data: { metadata: { userId } },
-      success_url: `${origin}/app?checkout=success`,
-      cancel_url: `${origin}/billing?checkout=cancel`,
+      success_url: `${origin}/app/billing?checkout=success`,
+      cancel_url: `${origin}/app/billing?checkout=cancel`,
     });
 
     return NextResponse.json({ url: checkoutSession.url });

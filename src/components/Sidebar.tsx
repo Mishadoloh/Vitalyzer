@@ -9,6 +9,7 @@ import {
   Activity,
   Camera,
   CalendarRange,
+  CreditCard,
   Dumbbell,
   History,
   LayoutDashboard,
@@ -39,6 +40,7 @@ const NAV = [
   { href: '/app/trends', key: 'trends', shortKey: 'trends', icon: TrendingUp },
   { href: '/app/history', key: 'history', shortKey: 'history', icon: History },
   { href: '/app/profile', key: 'profile', shortKey: 'profile', icon: UserRound },
+  { href: '/app/billing', key: 'billing', shortKey: 'billing', icon: CreditCard },
   { href: '/app/settings', key: 'settings', shortKey: 'options', icon: SettingsIcon },
 ] as const;
 

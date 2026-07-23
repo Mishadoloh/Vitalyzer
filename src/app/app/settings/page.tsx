@@ -1,12 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
 import {
   Bell,
   CheckCircle2,
   Clock3,
-  CreditCard,
   Database,
   Download,
   LogOut,
@@ -161,7 +161,6 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
   const [seedingDemo, setSeedingDemo] = useState(false);
   const [wiping, setWiping] = useState(false);
   const [sendingDigest, setSendingDigest] = useState(false);
@@ -287,19 +286,6 @@ export default function SettingsPage() {
     } catch (e) {
       showToast(e instanceof Error ? e.message : String(e), true);
       setWiping(false);
-    }
-  }
-
-  async function openBillingPortal() {
-    setPortalLoading(true);
-    try {
-      const response = await fetch('/api/stripe/portal', { method: 'POST' });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Не вдалося відкрити керування підпискою');
-      window.location.href = data.url;
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : String(e), true);
-      setPortalLoading(false);
     }
   }
 
@@ -429,14 +415,12 @@ export default function SettingsPage() {
               />
             )}
             {!isGuest && (
-              <button
-                onClick={openBillingPortal}
-                disabled={portalLoading}
+              <Link
+                href="/app/billing"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[13px] hover:border-accent hover:text-accent disabled:opacity-60"
               >
-                <CreditCard size={14} />
-                {portalLoading ? 'Відкриваю...' : 'Підписка'}
-              </button>
+                Підписка й оплата
+              </Link>
             )}
             <button
               onClick={() => signOut({ callbackUrl: '/' })}
