@@ -3,6 +3,7 @@ import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import type { NextAuthOptions } from 'next-auth';
 import { prisma } from './prisma';
+import { isAdminEmail } from './admin-access';
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
@@ -125,12 +126,15 @@ export const authOptions: NextAuthOptions = {
           token.picture = upgradedUser.image;
         }
       }
+      token.isAdmin = isAdminEmail(typeof token.email === 'string' ? token.email : null);
       return token;
     },
     async session({ session, token }) {
       if (session.user && token.userId) {
-        (session.user as { id?: string; isGuest?: boolean }).id = token.userId as string;
-        (session.user as { id?: string; isGuest?: boolean }).isGuest = Boolean(token.isGuest);
+        const sessionUser = session.user as { id?: string; isGuest?: boolean; isAdmin?: boolean };
+        sessionUser.id = token.userId as string;
+        sessionUser.isGuest = Boolean(token.isGuest);
+        sessionUser.isAdmin = Boolean(token.isAdmin);
       }
       return session;
     },

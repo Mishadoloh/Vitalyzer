@@ -17,6 +17,7 @@ import {
   PlusCircle,
   Settings as SettingsIcon,
   ShieldCheck,
+  ShieldEllipsis,
   Target,
   TrendingUp,
   UploadCloud,
@@ -49,6 +50,7 @@ export default function Sidebar() {
   const [counts, setCounts] = useState<{ sleep: number; workouts: number; nutrition: number } | null>(null);
   const [open, setOpen] = useState(false);
   const isGuest = Boolean((session?.user as { isGuest?: boolean } | undefined)?.isGuest);
+  const isAdmin = Boolean((session?.user as { isAdmin?: boolean } | undefined)?.isAdmin);
   const googleAccount = status === 'authenticated' && !isGuest;
   const accountName = session?.user?.name || session?.user?.email || common('guestMode');
 
@@ -145,6 +147,15 @@ export default function Sidebar() {
             );
           })}
         </nav>
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="mb-2 flex items-center gap-2.5 rounded-xl border border-info/25 bg-info/10 px-3 py-2.5 text-sm font-semibold text-info transition-colors hover:border-info/50"
+          >
+            <ShieldEllipsis size={16} />
+            Адмін-панель
+          </Link>
+        )}
         <Link
           href="/app/profile"
           className={`mb-3 flex items-center gap-2.5 rounded-xl border p-3 transition-colors hover:bg-bg-card ${
